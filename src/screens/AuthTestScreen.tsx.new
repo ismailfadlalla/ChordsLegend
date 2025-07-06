@@ -1,0 +1,256 @@
+// src/screens/AuthTestScreen.tsx
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { useAuth } from '../context/AuthProvider';
+import { testFirebaseConnection } from '../firebase';
+
+export default function AuthTestScreen() {
+  const { user, isLoading, error, isConnected, signUp, login, clearError } = useAuth();
+  const [testResults, setTestResults] = useState<string[]>([]);
+  const [testing, setTesting] = useState(false);
+
+  useEffect(() => {
+    runInitialTests();
+  }, []);
+
+  const addTestResult = (message: string) => {
+    setTestResults(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+  };
+
+  const runInitialTests = async () => {
+    setTesting(true);
+    addTestResult('Starting authentication system tests...');
+    
+    // Test Firebase connection
+    try {
+      const connected = await testFirebaseConnection();
+      addTestResult(`Firebase connection: ${connected ? 'SUCCESS' : 'FAILED'}`);
+    } catch (error: any) {
+      addTestResult(`Firebase connection error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    // Test auth state
+    addTestResult(`Auth loading state: ${isLoading}`);
+    addTestResult(`Auth connected state: ${isConnected}`);
+    addTestResult(`Current user: ${user ? user.email : 'No user'}`);
+    addTestResult(`Auth error: ${error || 'No error'}`);
+    
+    setTesting(false);
+  };
+
+  const testSignUp = async () => {
+    const testEmail = `test.${Date.now()}@example.com`;
+    const testPassword = 'testpassword123';
+    
+    addTestResult(`Testing signup with: ${testEmail}`);
+    
+    try {
+      setTesting(true);
+      await signUp(testEmail, testPassword);
+      addTestResult('Signup test: SUCCESS');
+    } catch (error: any) {
+      addTestResult(`Signup test FAILED: ${error.message}`);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const testSignIn = async () => {
+    // Use a known test account
+    const testEmail = 'test@example.com';
+    const testPassword = 'testpassword123';
+    
+    addTestResult(`Testing signin with: ${testEmail}`);
+    
+    try {
+      setTesting(true);
+      await login(testEmail, testPassword);
+      addTestResult('Signin test: SUCCESS');
+    } catch (error: any) {
+      addTestResult(`Signin test FAILED: ${error.message}`);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const clearTests = () => {
+    setTestResults([]);
+    clearError();
+  };
+
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Authentication Debug Screen</Text>
+        <Text style={styles.subtitle}>Test Firebase Authentication</Text>
+      </View>
+
+      {/* Current Status */}
+      <View style={styles.statusContainer}>
+        <Text style={styles.sectionTitle}>Current Status</Text>
+        <Text style={styles.statusText}>
+          User: {user ? user.email : 'Not logged in'}
+        </Text>
+        <Text style={styles.statusText}>
+          Loading: {isLoading ? 'Yes' : 'No'}
+        </Text>
+        <Text style={styles.statusText}>
+          Connected: {isConnected ? 'Yes' : 'No'}
+        </Text>
+        <Text style={styles.statusText}>
+          Error: {error || 'None'}
+        </Text>
+      </View>
+
+      {/* Test Buttons */}
+      <View style={styles.testContainer}>
+        <Text style={styles.sectionTitle}>Tests</Text>
+        
+        <TouchableOpacity 
+          style={styles.testButton} 
+          onPress={runInitialTests} 
+          disabled={testing}
+        >
+          <Text style={styles.testButtonText}>Run Connection Tests</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.testButton} 
+          onPress={testSignUp}
+          disabled={testing}
+        >
+          <Text style={styles.testButtonText}>Test Sign Up</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.testButton} 
+          onPress={testSignIn}
+          disabled={testing}
+        >
+          <Text style={styles.testButtonText}>Test Sign In</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.clearButton} 
+          onPress={clearTests}
+          disabled={testing}
+        >
+          <Text style={styles.clearButtonText}>Clear Results</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Test Results */}
+      <View style={styles.resultsContainer}>
+        <Text style={styles.sectionTitle}>Test Results</Text>
+        {testing && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#007AFF" />
+            <Text style={styles.loadingText}>Running tests...</Text>
+          </View>
+        )}
+        {testResults.map((result, index) => (
+          <Text key={index} style={styles.resultText}>
+            {result}
+          </Text>
+        ))}
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  header: {
+    padding: 20,
+    backgroundColor: '#007AFF',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#fff',
+    marginTop: 5,
+  },
+  statusContainer: {
+    padding: 20,
+    backgroundColor: '#f8f9fa',
+    margin: 10,
+    borderRadius: 8,
+  },
+  testContainer: {
+    padding: 20,
+    margin: 10,
+    borderRadius: 8,
+    backgroundColor: '#f8f9fa',
+  },
+  resultsContainer: {
+    padding: 20,
+    margin: 10,
+    borderRadius: 8,
+    backgroundColor: '#f8f9fa',
+    minHeight: 200,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+  statusText: {
+    fontSize: 14,
+    marginBottom: 5,
+    color: '#666',
+  },
+  testButton: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  testButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  clearButton: {
+    backgroundColor: '#dc3545',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  clearButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  loadingText: {
+    marginLeft: 10,
+    color: '#666',
+  },
+  resultText: {
+    fontSize: 12,
+    marginBottom: 3,
+    color: '#333',
+    fontFamily: 'monospace',
+  }
+});

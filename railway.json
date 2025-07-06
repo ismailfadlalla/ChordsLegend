@@ -1,0 +1,29 @@
+{
+  "name": "ChordsLegend API",
+  "description": "Chord analysis API for ChordsLegend mobile app",
+  "source": {
+    "type": "local"
+  },
+  "env": {},
+  "services": {
+    "api": {
+      "name": "chordslegend-api",
+      "source": {
+        "type": "local",
+        "path": "./server"
+      },
+      "runtime": "python",
+      "build": {
+        "commands": [
+          "pip install -r requirements.txt"
+        ]
+      },
+      "start": {
+        "command": "python app.py"
+      },
+      "env": {
+        "PORT": "${{railway.PORT}}"
+      }
+    }
+  }
+}

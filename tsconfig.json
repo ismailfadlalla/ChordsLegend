@@ -1,6 +1,48 @@
 {
-  "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
-  }
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react-native",
+    "lib": [
+      "dom",
+      "esnext"
+    ],
+    "moduleResolution": "node",
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "target": "esnext",
+    "paths": {
+      "@env": [
+        "./src/types/env.d.ts"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "App.js",
+    "*.ts",
+    "*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "babel.config.js",
+    "metro.config.js",
+    "app.config.js",
+    "**/*.config.js",
+    "android",
+    "ios",
+    "chords-backend",
+    "server",
+    "venv",
+    "**/__pycache__",
+    "**/*.pyc",
+    "**/.git",
+    "dist",
+    "build"
+  ],
+  "extends": "expo/tsconfig.base"
 }
