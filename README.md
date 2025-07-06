@@ -1,32 +1,49 @@
-# ChordsLegend - Music App Setup Guide
+# 🎵 ChordsLegend v2 - AI-Powered Chord Detection & Analysis
 
-## Overview
+**A Chordify-like mobile app** that detects chords from any audio source with real-time analysis, YouTube integration, and interactive music learning tools.
 
-ChordsLegend is a React Native/Expo app similar to Chordify that allows users to:
+![Platform](https://img.shields.io/badge/Platform-iOS%20%7C%20Android%20%7C%20Web-blue)
+![React Native](https://img.shields.io/badge/React%20Native-0.76.8-blue)
+![Python](https://img.shields.io/badge/Python-3.10+-green)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
-- Sign up and login with email/password
-- Search for songs using YouTube API
-- View chord progressions for songs
-- Save favorites
-- Play along with chord displays
-- Future: Pi Network integration for premium features
+## ✨ Features
 
-## Current Features Implemented
+### 🎼 Core Features
+- **Real-time Chord Detection** - Analyze any audio source for chord progressions
+- **YouTube Integration** - Overlay chord progressions on YouTube videos
+- **Interactive Fretboard** - Visual guitar chord representations
+- **Synchronized Playback** - Audio-visual chord timing synchronization
+- **Cross-Platform** - iOS, Android, and Web support
 
-### ✅ Authentication
+### 🚀 Advanced Features
+- **AI-Powered Analysis** - Machine learning chord detection using Librosa
+- **Firebase Authentication** - Secure user management
+- **Cloud Processing** - Backend chord analysis on Railway
+- **Offline Support** - Cached chord libraries for offline use
+- **Multiple Tunings** - Support for various guitar tunings
 
-- Email/password signup and login
-- Firebase authentication
-- User session management
-- Logout functionality
+## 🏗️ Architecture
 
-### ✅ Navigation
+### Frontend (React Native + Expo)
+```
+📱 Mobile App
+├── 🎵 Audio Analysis Components
+├── 🎸 Interactive Fretboard
+├── 📺 YouTube Player Integration
+├── 🔐 Firebase Authentication
+└── 📊 Real-time Visualization
+```
 
-- Bottom tab navigation (Home, Search, Library, Settings)
-- Stack navigation for player screens
-- Proper TypeScript navigation types
-
-### ✅ Search Functionality
+### Backend (Python Flask)
+```
+🐍 API Server
+├── 🧠 AI Chord Detection (NumPy, Librosa)
+├── 📈 Audio Signal Processing
+├── 🎼 Chord Library Management
+├── ⚡ Real-time Analysis
+└── 🚀 Railway Deployment
+```
 
 - YouTube API integration for song search
 - Beautiful search results with thumbnails
