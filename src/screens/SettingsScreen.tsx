@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as WebBrowser from 'expo-web-browser';
 import React, { useState } from 'react';
 import {
-    Alert, Linking, Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View
+    Alert,
+    ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View
 } from 'react-native';
 import { useAuth } from '../context/AuthProvider';
 
@@ -124,52 +124,12 @@ export default function SettingsScreen() {
         <SettingItem
           title="Terms of Service"
           subtitle="Read our terms and conditions"
-          onPress={() => {
-            // Base URL for legal documents
-            const baseUrl = __DEV__ 
-              ? 'http://localhost:5000/legal/' // Local development
-              : 'https://chordslegend-v2-production.up.railway.app/legal/'; // Production
-            
-            const termsUrl = `${baseUrl}terms-of-service.html`;
-            
-            // Open the terms in the browser or WebView
-            if (Platform.OS === 'web') {
-              window.open(termsUrl, '_blank');
-            } else {
-              WebBrowser.openBrowserAsync(termsUrl)
-                .catch(err => {
-                  // Fallback to external browser if WebBrowser fails
-                  Linking.openURL(termsUrl).catch(() => {
-                    Alert.alert('Error', 'Could not open the Terms of Service. Please visit our website directly.');
-                  });
-                });
-            }
-          }}
+          onPress={() => Alert.alert('Terms of Service', 'Please visit our website or check the legal folder in the app documentation for the complete Terms of Service.')}
         />
         <SettingItem
           title="Privacy Policy"
           subtitle="How we protect your data"
-          onPress={() => {
-            // Base URL for legal documents
-            const baseUrl = __DEV__ 
-              ? 'http://localhost:5000/legal/' // Local development
-              : 'https://chordslegend-v2-production.up.railway.app/legal/'; // Production
-            
-            const policyUrl = `${baseUrl}privacy-policy.html`;
-            
-            // Open the policy in the browser or WebView
-            if (Platform.OS === 'web') {
-              window.open(policyUrl, '_blank');
-            } else {
-              WebBrowser.openBrowserAsync(policyUrl)
-                .catch(err => {
-                  // Fallback to external browser if WebBrowser fails
-                  Linking.openURL(policyUrl).catch(() => {
-                    Alert.alert('Error', 'Could not open the Privacy Policy. Please visit our website directly.');
-                  });
-                });
-            }
-          }}
+          onPress={() => Alert.alert('Privacy Policy', 'Please visit our website or check the legal folder in the app documentation for our complete Privacy Policy.')}
         />
         <SettingItem
           title="App Version"

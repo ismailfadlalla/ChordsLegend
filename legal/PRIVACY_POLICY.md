@@ -148,8 +148,9 @@ We may update this Privacy Policy from time to time. We will notify you of any c
 
 If you have questions about this Privacy Policy or our data practices, please contact us:
 
-- **GitHub Issues**: https://github.com/ismailfadlalla/ChordsLegend/issues
-- **GitHub Repository**: https://github.com/ismailfadlalla/ChordsLegend
+- **Email**: privacy@chordslegend.com
+- **Website**: https://chordslegend.com/privacy
+- **Address**: [Your Business Address]
 
 ## 14. Jurisdiction-Specific Rights
 

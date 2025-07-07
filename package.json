@@ -2,15 +2,7 @@
   "name": "chordslegend",
   "version": "2.0.0",
   "description": "Professional AI-powered chord detection and analysis mobile application with Pi Network integration",
-  "keywords": [
-    "music",
-    "chords",
-    "guitar",
-    "learning",
-    "ai",
-    "pi-network",
-    "react-native"
-  ],
+  "keywords": ["music", "chords", "guitar", "learning", "ai", "pi-network", "react-native"],
   "repository": {
     "type": "git",
     "url": "https://github.com/ismailfadlalla/ChordsLegend-v2.git"
@@ -38,7 +30,6 @@
     "expo-linear-gradient": "~12.1.2",
     "expo-splash-screen": "^0.18.2",
     "expo-status-bar": "~1.4.4",
-    "expo-web-browser": "^14.2.0",
     "firebase": "^10.11.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
