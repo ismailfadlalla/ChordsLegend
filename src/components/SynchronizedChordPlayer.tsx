@@ -534,7 +534,8 @@ export const SynchronizedChordPlayer: React.FC<SynchronizedChordPlayerProps> = (
                       </Text>
                     </TouchableOpacity>
                   ))}
-                </View>                </View>
+                </View>
+              </View>
               ) : null;
             })()}
       </ScrollView>
