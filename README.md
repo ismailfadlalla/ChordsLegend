@@ -198,3 +198,47 @@ src/
 7. **Multiple Instruments**: Piano, ukulele support
 
 The app is now ready for testing and further development!
+
+## 🚢 Deployment
+
+ChordsLegend is deployed on Railway.app with both the Flask API backend and the React/Expo web app frontend.
+
+### Live URLs
+
+- **Production App:** [https://chordslegend-production.up.railway.app/](https://chordslegend-production.up.railway.app/)
+- **Legal Documents:**
+  - [Terms of Service](https://chordslegend-production.up.railway.app/legal/terms-of-service.html)
+  - [Privacy Policy](https://chordslegend-production.up.railway.app/legal/privacy-policy.html)
+- **API Endpoints:**
+  - [Health Check](https://chordslegend-production.up.railway.app/api/health)
+  - [Test Chords](https://chordslegend-production.up.railway.app/api/test-chords)
+
+### Deployment Instructions
+
+1. Build the Expo web app:
+
+   ```bash
+   npx expo export:web --clear
+   ```
+
+2. Run the deployment script:
+
+   ```bash
+   # On Windows
+   .\deploy.ps1
+
+   # On macOS/Linux
+   ./deploy.sh
+   ```
+
+3. Verify deployment:
+   ```bash
+   node test-railway-deployment.js
+   ```
+
+### Pi Network Integration
+
+ChordsLegend is integrated with Pi Network and can be accessed in the Pi Browser at:
+[https://sandbox.minepi.com/app/chords-legend](https://sandbox.minepi.com/app/chords-legend)
+
+Check the [DEPLOYMENT_STATUS.md](./DEPLOYMENT_STATUS.md) file for the latest deployment status and verification steps.

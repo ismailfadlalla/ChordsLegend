@@ -12,7 +12,11 @@
     "start": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "build:web": "expo export:web --clear",
+    "deploy:prepare": "powershell -File .\\deploy-prep.ps1",
+    "deploy:test": "node test-railway-deployment.js",
+    "deploy": "powershell -File .\\deploy.ps1"
   },
   "dependencies": {
     "@expo/webpack-config": "^18.0.1",
