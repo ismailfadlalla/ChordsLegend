@@ -54,22 +54,35 @@ const UnifiedYouTubePlayer = React.forwardRef<YouTubePlayerRef, UnifiedYouTubePl
   const timeUpdateInterval = useRef<NodeJS.Timeout | null>(null);
   const startPlayTime = useRef<number>(0);
 
-  // Simple time tracking that starts from 0 and counts up
+  // Real YouTube API time tracking with fallback to simple tracking
   const startTimeTracking = useCallback(() => {
     if (timeUpdateInterval.current) {
       clearInterval(timeUpdateInterval.current);
     }
     
-    console.log('⏰ Starting simple time tracking from:', currentTime);
+    console.log('⏰ Starting YouTube time tracking from:', currentTime);
     startPlayTime.current = Date.now() - (currentTime * 1000); // Account for current position
     
     timeUpdateInterval.current = setInterval(() => {
+      // Try to get actual YouTube player time first
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        try {
+          const iframe = document.querySelector(`iframe[src*="${videoId}"]`) as HTMLIFrameElement;
+          if (iframe && iframe.contentWindow) {
+            // Request current time from YouTube player
+            iframe.contentWindow.postMessage('{"event":"command","func":"getCurrentTime","args":""}', '*');
+          }
+        } catch (e) {
+          console.warn('Could not get YouTube time, using fallback:', e);
+        }
+      }
+      
+      // Fallback: use elapsed time tracking
       const elapsed = (Date.now() - startPlayTime.current) / 1000;
-      console.log('⏰ Time update:', elapsed.toFixed(1));
       setCurrentTime(elapsed);
       onTimeUpdate?.(elapsed);
-    }, 500); // Update every 500ms
-  }, [currentTime, onTimeUpdate]);
+    }, 250); // Update every 250ms for better accuracy
+  }, [currentTime, onTimeUpdate, videoId]);
 
   const stopTimeTracking = useCallback(() => {
     console.log('⏰ Stopping time tracking');
@@ -116,10 +129,17 @@ const UnifiedYouTubePlayer = React.forwardRef<YouTubePlayerRef, UnifiedYouTubePl
             if (isPlaying !== isPlayerPlaying) {
               handlePlayStateChange(isPlaying);
             }
-          } else if (data.event === 'video-time-update') {
-            console.log('🎬 YouTube iframe time update:', data.info);
-            setCurrentTime(data.info);
-            onTimeUpdate?.(data.info);
+          } else if (data.event === 'video-time-update' || data.event === 'infoDelivery') {
+            // Handle both time updates and getCurrentTime responses
+            if (data.info && typeof data.info === 'number') {
+              console.log('🎬 YouTube iframe time update:', data.info);
+              setCurrentTime(data.info);
+              onTimeUpdate?.(data.info);
+            } else if (data.info && data.info.currentTime !== undefined) {
+              console.log('🎬 YouTube iframe getCurrentTime:', data.info.currentTime);
+              setCurrentTime(data.info.currentTime);
+              onTimeUpdate?.(data.info.currentTime);
+            }
           }
         } catch (e) {
           // Ignore non-JSON messages

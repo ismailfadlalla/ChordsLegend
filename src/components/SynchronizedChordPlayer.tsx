@@ -43,7 +43,7 @@ export const SynchronizedChordPlayer: React.FC<SynchronizedChordPlayerProps> = (
 
   const playerRef = useRef<YouTubePlayerRef>(null);
 
-  // Get current chord based on YouTube player time with improved accuracy
+  // Get current chord based on YouTube player time with improved accuracy and silence detection
   const getCurrentChord = useCallback(() => {
     if (chordProgression.length === 0) return null;
     
@@ -52,18 +52,22 @@ export const SynchronizedChordPlayer: React.FC<SynchronizedChordPlayerProps> = (
     
     // Find chord that should be playing at current time
     const activeChord = chordProgression.find((chord, index) => {
-      const nextChord = chordProgression[index + 1];
-      const isInTimeRange = adjustedTime >= chord.startTime && 
-                           (!nextChord || adjustedTime < nextChord.startTime);
+      const chordEndTime = chord.startTime + chord.duration;
+      const isInTimeRange = adjustedTime >= chord.startTime && adjustedTime < chordEndTime;
       
       if (isInTimeRange) {
-        console.log(`🎸 Current chord at ${adjustedTime.toFixed(1)}s: ${chord.chord} (${chord.startTime}s - ${chord.startTime + chord.duration}s)`);
+        console.log(`🎸 Current chord at ${adjustedTime.toFixed(1)}s: ${chord.chord} (${chord.startTime}s - ${chordEndTime.toFixed(1)}s)`);
       }
       
       return isInTimeRange;
     });
     
-    return activeChord || chordProgression[0];
+    // If no chord is found, we might be in a silence period
+    if (!activeChord) {
+      console.log(`🔇 No chord at ${adjustedTime.toFixed(1)}s - likely silence period`);
+    }
+    
+    return activeChord || null; // Return null instead of first chord when in silence
   }, [currentTime, chordProgression, timingOffset]);
 
   // Get next chord for preview
@@ -74,9 +78,8 @@ export const SynchronizedChordPlayer: React.FC<SynchronizedChordPlayerProps> = (
     const adjustedTime = currentTime + timingOffset;
     
     const currentIndex = chordProgression.findIndex(chord => {
-      const nextChord = chordProgression[chordProgression.indexOf(chord) + 1];
-      return adjustedTime >= chord.startTime && 
-             (!nextChord || adjustedTime < nextChord.startTime);
+      const chordEndTime = chord.startTime + chord.duration;
+      return adjustedTime >= chord.startTime && adjustedTime < chordEndTime;
     });
     
     return currentIndex >= 0 && currentIndex < chordProgression.length - 1 
@@ -92,10 +95,9 @@ export const SynchronizedChordPlayer: React.FC<SynchronizedChordPlayerProps> = (
     const adjustedTime = currentTime + timingOffset;
     
     // Find chord that should be playing at current time
-    const activeChordIndex = chordProgression.findIndex((chord, index) => {
-      const nextChord = chordProgression[index + 1];
-      return adjustedTime >= chord.startTime && 
-             (!nextChord || adjustedTime < nextChord.startTime);
+    const activeChordIndex = chordProgression.findIndex(chord => {
+      const chordEndTime = chord.startTime + chord.duration;
+      return adjustedTime >= chord.startTime && adjustedTime < chordEndTime;
     });
     
     if (activeChordIndex !== -1 && activeChordIndex !== currentChordIndex) {
@@ -106,9 +108,15 @@ export const SynchronizedChordPlayer: React.FC<SynchronizedChordPlayerProps> = (
         chord: activeChord.chord,
         index: activeChordIndex + 1,
         total: chordProgression.length,
+        chordStart: activeChord.startTime,
+        chordEnd: (activeChord.startTime + activeChord.duration).toFixed(1),
         nextChord: chordProgression[activeChordIndex + 1]?.chord || 'End'
       });
       setCurrentChordIndex(activeChordIndex);
+    } else if (activeChordIndex === -1 && currentChordIndex !== -1) {
+      // We're in a silence period
+      console.log('🔇 Entering silence period at', adjustedTime.toFixed(1));
+      setCurrentChordIndex(-1);
     }
   }, [currentTime, chordProgression, currentChordIndex, timingOffset]);
 
@@ -462,7 +470,28 @@ export const SynchronizedChordPlayer: React.FC<SynchronizedChordPlayerProps> = (
           const currentFingering = currentChord ? getChordFingering(currentChord.chord) : null;
           const nextFingering = nextChord ? getChordFingering(nextChord.chord) : null;
           
-          return currentChord && currentFingering ? (
+          // Show silence indicator when no chord is playing
+          if (!currentChord) {
+            return (
+              <View style={[styles.chordDisplay, { backgroundColor: theme.surface }]}>
+                <Text style={[styles.currentChordLabel, { color: theme.secondaryText }]}>
+                  🔇 Silence Period
+                </Text>
+                <Text style={[styles.fingeringStyle, { color: theme.secondaryText }]}>
+                  No chords playing - this might be an instrumental break or quiet section
+                </Text>
+                {nextChord && (
+                  <View style={styles.nextChordPreview}>
+                    <Text style={[styles.nextChordLabel, { color: theme.text }]}>
+                      Next chord: {nextChord.chord} at {nextChord.startTime}s
+                    </Text>
+                  </View>
+                )}
+              </View>
+            );
+          }
+          
+          return currentFingering ? (
               <View style={[styles.chordDisplay, { backgroundColor: theme.surface }]}>
                 <View style={styles.currentNextContainer}>
                   {/* Current Chord */}
@@ -796,6 +825,13 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 2,
+  },
+  nextChordPreview: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    alignItems: 'center',
   },
 });
 
