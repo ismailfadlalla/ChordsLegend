@@ -22,16 +22,25 @@ def handle_options():
 
 @app.route('/')
 def home():
-    return jsonify({
-        "message": "ChordsLegend API is running!",
-        "status": "success",
-        "version": "1.0.0",
-        "endpoints": {
-            "test_chords": "/api/test-chords",
-            "analyze_song": "/api/analyze-song",
-            "health": "/api/health"
-        }
-    })
+    # Check if request is from Pi Browser or coming from API client
+    user_agent = request.headers.get('User-Agent', '').lower()
+    accept_header = request.headers.get('Accept', '')
+    
+    # If it looks like an API request or explicitly requests JSON, send JSON response
+    if 'application/json' in accept_header or 'postman' in user_agent or 'mozilla' not in user_agent:
+        return jsonify({
+            "message": "ChordsLegend API is running!",
+            "status": "success",
+            "version": "1.0.0",
+            "endpoints": {
+                "test_chords": "/api/test-chords",
+                "analyze_song": "/api/analyze-song",
+                "health": "/api/health"
+            }
+        })
+    
+    # Otherwise serve the HTML page (for browsers, including Pi Browser)
+    return send_from_directory('.', 'index.html')
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -92,6 +101,12 @@ def analyze_chords():
             "status": "error",
             "error": str(e)
         }), 500
+
+# Pi Network specific route
+@app.route('/pi-network')
+def pi_network():
+    """Route specifically for Pi Network integration"""
+    return send_from_directory('.', 'index.html')
 
 # Legal document routes
 @app.route('/legal/<filename>')
