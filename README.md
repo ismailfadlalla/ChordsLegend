@@ -1,6 +1,6 @@
 # 🎵 ChordsLegend v2 - AI-Powered Chord Detection & Analysis
 
-**A Chordify-like mobile app** that detects chords from any audio source with real-time analysis, YouTube integration, and interactive music learning tools.
+**A professional mobile application** that detects chords from any audio source with real-time analysis, YouTube integration, and interactive music learning tools.
 
 ![Platform](https://img.shields.io/badge/Platform-iOS%20%7C%20Android%20%7C%20Web-blue)
 ![React Native](https://img.shields.io/badge/React%20Native-0.76.8-blue)
