@@ -26,7 +26,11 @@ def home():
         "endpoints": {
             "test_chords": "/api/test-chords",
             "analyze_song": "/api/analyze-song",
-            "health": "/api/health"
+            "health": "/api/health",
+            "legal_documents": {
+                "terms_of_service": "/legal/terms-of-service.html",
+                "privacy_policy": "/legal/privacy-policy.html"
+            }
         }
     })
 
