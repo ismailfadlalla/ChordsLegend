@@ -7,13 +7,14 @@ import HomeScreen from '../screens/HomeScreen';
 import LibraryScreen from '../screens/LibraryScreen';
 import SearchScreen from '../screens/SearchScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import TestScreen from '../screens/TestScreen';
 
 const Stack = createNativeStackNavigator();
 
 export default function RootStack() {
   return (
     <Stack.Navigator 
-      initialRouteName="Home"
+      initialRouteName="Test"
       screenOptions={{
         headerStyle: {
           backgroundColor: '#4CAF50',
@@ -24,6 +25,11 @@ export default function RootStack() {
         },
       }}
     >
+      <Stack.Screen 
+        name="Test" 
+        component={TestScreen} 
+        options={{ title: '🧪 Test Screen' }}
+      />
       <Stack.Screen 
         name="Home" 
         component={HomeScreen} 

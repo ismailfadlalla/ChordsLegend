@@ -1,5 +1,6 @@
 // src/navigation/types.ts
 export type RootStackParamList = {
+  Test: undefined;
   Welcome: undefined;
   Auth: { mode?: 'login' | 'signup' } | undefined;
   AuthTest: undefined;
