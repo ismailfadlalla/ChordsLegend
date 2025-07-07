@@ -7,7 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { CHORD_LIBRARY } from '../utils/chordLibrary';
 import CompactRhythmTimeline from './CompactRhythmTimeline';
 import EmbeddedRhythmSheet from './EmbeddedRhythmSheet';
-import { ChordFingering, Fretboard } from './Fretboard';
+import { ChordFingering, Fretboard } from './Fretboard.Enhanced';
 import UnifiedYouTubePlayer, { YouTubePlayerRef } from './UnifiedYouTubePlayer';
 
 interface ChordTiming {

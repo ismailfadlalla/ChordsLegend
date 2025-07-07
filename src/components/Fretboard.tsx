@@ -1,5 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, Dimensions, Text, View } from 'react-native';
+
+// Get screen dimensions for responsive sizing
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export interface ChordFingering {
   frets: number[]; // Fret numbers for each string (0 = open, -1 = muted)
@@ -20,6 +23,41 @@ interface FretboardProps {
   animationDelay?: number;
 }
 
+// Enhanced sizing system for better mobile experience
+const getSizeDimensions = (size: 'small' | 'medium' | 'large') => {
+  const baseWidth = Math.min(screenWidth * 0.85, 300); // Responsive to screen width
+  
+  switch (size) {
+    case 'small':
+      return {
+        width: baseWidth * 0.6,
+        height: (baseWidth * 0.6) * 1.2,
+        stringSpacing: (baseWidth * 0.6) / 6,
+        fretSpacing: ((baseWidth * 0.6) * 1.2) / 5,
+        dotSize: 12,
+        fontSize: 10
+      };
+    case 'medium':
+      return {
+        width: baseWidth * 0.75,
+        height: (baseWidth * 0.75) * 1.2,
+        stringSpacing: (baseWidth * 0.75) / 6,
+        fretSpacing: ((baseWidth * 0.75) * 1.2) / 5,
+        dotSize: 16,
+        fontSize: 12
+      };
+    case 'large':
+      return {
+        width: baseWidth,
+        height: baseWidth * 1.2,
+        stringSpacing: baseWidth / 6,
+        fretSpacing: (baseWidth * 1.2) / 5,
+        dotSize: 20,
+        fontSize: 14
+      };
+  }
+};
+
 export const Fretboard: React.FC<FretboardProps> = ({ 
   chord, 
   fingering, 
@@ -32,6 +70,7 @@ export const Fretboard: React.FC<FretboardProps> = ({
   const strings = ['E', 'A', 'D', 'G', 'B', 'E']; // From 6th to 1st string
   const maxFrets = 4; // Standard chord diagrams show 4 frets
   const baseFret = fingering.baseFret || 1;
+  const dimensions = getSizeDimensions(size);
   
   // Animation for highlighting
   const highlightAnim = useRef(new Animated.Value(0)).current;
@@ -70,101 +109,109 @@ export const Fretboard: React.FC<FretboardProps> = ({
       }).start();
     }
   }, [isHighlighted, animationDelay, highlightAnim, pulseAnim]);
-  
-  // Size configurations
-  const sizeConfig = {
-    small: {
-      stringSpacing: 28,
-      fretSpacing: 32,
-      dotSize: 18,
-      fontSize: 10,
-      nutThickness: 3,
-      fretThickness: 1.5,
-      stringThickness: 1,
-    },
-    medium: {
-      stringSpacing: 36,
-      fretSpacing: 40,
-      dotSize: 24,
-      fontSize: 12,
-      nutThickness: 4,
-      fretThickness: 2,
-      stringThickness: 1.5,
-    },
-    large: {
-      stringSpacing: 44,
-      fretSpacing: 48,
-      dotSize: 30,
-      fontSize: 14,
-      nutThickness: 5,
-      fretThickness: 2.5,
-      stringThickness: 2,
-    },
-  };
 
-  const config = sizeConfig[size];
-  const totalWidth = maxFrets * config.fretSpacing + 40;
-  const totalHeight = (strings.length - 1) * config.stringSpacing + 80;
-
-  const renderFretboard = () => {
+  const renderEnhancedFretboard = () => {
     return (
-      <View style={[styles.fretboardContainer, { width: totalWidth, height: totalHeight }]}>
-        {/* Nut (thick vertical line at the beginning) */}
-        {baseFret === 1 && (
-          <View 
-            style={[
-              styles.nut, 
-              { 
-                height: (strings.length - 1) * config.stringSpacing + 10,
-                width: config.nutThickness,
-                backgroundColor: theme.text,
-                left: 20,
-                top: 35,
-              }
-            ]} 
-          />
-        )}
+      <Animated.View style={[
+        styles.fretboardContainer, 
+        { 
+          width: dimensions.width, 
+          height: dimensions.height,
+          backgroundColor: theme.surface + '20',
+          borderRadius: 12,
+          padding: 12,
+          elevation: isHighlighted ? 4 : 2,
+          shadowColor: theme.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: isHighlighted ? 0.3 : 0.1,
+          shadowRadius: isHighlighted ? 8 : 4,
+          transform: [{
+            scale: pulseAnim.interpolate({
+              inputRange: [0.95, 1.05],
+              outputRange: [0.95, 1.05],
+              extrapolate: 'clamp',
+            })
+          }],
+          borderWidth: highlightAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 3],
+            extrapolate: 'clamp',
+          }),
+          borderColor: theme.primary + '80',
+        }
+      ]}>
+        {/* Background gradient for fretboard */}
+        <View style={[
+          styles.fretboardBackground,
+          {
+            width: dimensions.width - 24,
+            height: dimensions.height - 24,
+            backgroundColor: '#F5DEB3', // Light wood color
+            borderRadius: 8,
+            position: 'absolute',
+            top: 12,
+            left: 12,
+          }
+        ]} />
         
-        {/* Fret lines */}
+        {/* Nut (thick line at the beginning for open chords) */}
+        <View
+          style={[
+            styles.nut,
+            {
+              backgroundColor: baseFret === 1 ? '#8B4513' : 'transparent',
+              height: (strings.length - 1) * dimensions.stringSpacing + 10,
+              width: baseFret === 1 ? 6 : 0,
+              left: 20,
+              top: 40,
+              borderRadius: 3,
+            }
+          ]}
+        />
+        
+        {/* Frets with improved styling */}
         {Array.from({ length: maxFrets + 1 }, (_, fretIndex) => (
           <View
             key={`fret-${fretIndex}`}
             style={[
               styles.fretLine,
               {
-                height: (strings.length - 1) * config.stringSpacing + 10,
-                width: config.fretThickness,
+                height: (strings.length - 1) * dimensions.stringSpacing + 10,
+                width: fretIndex === 0 ? (baseFret === 1 ? 0 : 3) : 2,
                 backgroundColor: fretIndex === 0 && baseFret > 1 
                   ? theme.text 
-                  : fretIndex === 0 && baseFret === 1
-                    ? '#8B4513' // Brown nut color
-                    : '#C0C0C0', // Silver fret wire
-                left: 20 + (fretIndex * config.fretSpacing),
-                top: 35,
-                borderRadius: config.fretThickness / 2,
+                  : '#C0C0C0', // Silver fret wire
+                left: 25 + (fretIndex * dimensions.fretSpacing),
+                top: 40,
+                borderRadius: 1,
+                elevation: 1,
               }
             ]}
           />
         ))}
         
-        {/* Strings */}
-        {strings.map((stringName, stringIndex) => (
-          <View
-            key={`string-${stringIndex}`}
-            style={[
-              styles.stringLine,
-              {
-                width: maxFrets * config.fretSpacing + 10,
-                height: config.stringThickness,
-                backgroundColor: '#888',
-                left: 15,
-                top: 35 + (stringIndex * config.stringSpacing),
-              }
-            ]}
-          />
-        ))}
+        {/* Strings with realistic thickness variation */}
+        {strings.map((stringName, stringIndex) => {
+          const stringThickness = stringIndex < 2 ? 3 : stringIndex < 4 ? 2 : 1.5;
+          return (
+            <View
+              key={`string-${stringIndex}`}
+              style={[
+                styles.stringLine,
+                {
+                  width: maxFrets * dimensions.fretSpacing + 10,
+                  height: stringThickness,
+                  backgroundColor: '#666',
+                  left: 20,
+                  top: 40 + (stringIndex * dimensions.stringSpacing),
+                  borderRadius: stringThickness / 2,
+                }
+              ]}
+            />
+          );
+        })}
         
-        {/* String labels */}
+        {/* String labels with better positioning */}
         {strings.map((stringName, stringIndex) => (
           <Text
             key={`label-${stringIndex}`}
@@ -172,9 +219,11 @@ export const Fretboard: React.FC<FretboardProps> = ({
               styles.stringLabel,
               {
                 color: theme.text,
-                fontSize: config.fontSize,
-                left: 2,
-                top: 30 + (stringIndex * config.stringSpacing),
+                fontSize: dimensions.fontSize,
+                fontWeight: 'bold',
+                left: 4,
+                top: 35 + (stringIndex * dimensions.stringSpacing),
+                textAlign: 'center',
               }
             ]}
           >
@@ -189,9 +238,11 @@ export const Fretboard: React.FC<FretboardProps> = ({
               styles.baseFretNumber,
               {
                 color: theme.text,
-                fontSize: config.fontSize + 2,
-                left: 30 + (config.fretSpacing / 2),
-                top: 10,
+                fontSize: dimensions.fontSize + 2,
+                fontWeight: 'bold',
+                left: 30 + (dimensions.fretSpacing / 2),
+                top: 15,
+                textAlign: 'center',
               }
             ]}
           >
@@ -199,52 +250,9 @@ export const Fretboard: React.FC<FretboardProps> = ({
           </Text>
         )}
         
-        {/* Finger positions */}
-        {fingering.frets.map((fret, stringIndex) => {
-          if (fret <= 0) return null; // Skip open or muted strings
-          
-          const fretPosition = fret - baseFret + 1;
-          if (fretPosition < 1 || fretPosition > maxFrets) return null;
-          
-          const x = 20 + (fretPosition * config.fretSpacing) - (config.fretSpacing / 2);
-          const y = 35 + (stringIndex * config.stringSpacing) - (config.dotSize / 2);
-          
-          return (
-            <View
-              key={`finger-${stringIndex}`}
-              style={[
-                styles.fingerDot,
-                {
-                  width: config.dotSize,
-                  height: config.dotSize,
-                  borderRadius: config.dotSize / 2,
-                  backgroundColor: theme.primary || '#007AFF',
-                  left: x,
-                  top: y,
-                  borderWidth: 2,
-                  borderColor: '#fff',
-                }
-              ]}
-            >
-              <Text
-                style={[
-                  styles.fingerNumber,
-                  {
-                    fontSize: config.fontSize - 2,
-                    color: '#fff',
-                    fontWeight: 'bold',
-                  }
-                ]}
-              >
-                {fingering.fingers?.[stringIndex] || '●'}
-              </Text>
-            </View>
-          );
-        })}
-        
         {/* Open string indicators */}
         {fingering.frets.map((fret, stringIndex) => {
-          if (fret !== 0) return null;
+          if (fret !== 0) return null; // Only show for open strings
           
           return (
             <View
@@ -252,237 +260,98 @@ export const Fretboard: React.FC<FretboardProps> = ({
               style={[
                 styles.openStringIndicator,
                 {
-                  width: config.dotSize - 4,
-                  height: config.dotSize - 4,
-                  borderRadius: (config.dotSize - 4) / 2,
+                  width: dimensions.dotSize * 0.8,
+                  height: dimensions.dotSize * 0.8,
+                  borderRadius: (dimensions.dotSize * 0.8) / 2,
+                  borderWidth: 2,
                   borderColor: theme.primary || '#007AFF',
-                  left: 20 - ((config.dotSize - 4) / 2),
-                  top: 35 + (stringIndex * config.stringSpacing) - ((config.dotSize - 4) / 2),
-                }
-              ]}
-            >
-              <Text
-                style={[
-                  styles.openStringText,
-                  {
-                    fontSize: config.fontSize - 2,
-                    color: theme.primary || '#007AFF',
-                  }
-                ]}
-              >
-                ○
-              </Text>
-            </View>
-          );
-        })}
-        
-        {/* Muted string indicators */}
-        {fingering.frets.map((fret, stringIndex) => {
-          if (fret !== -1) return null;
-          
-          return (
-            <View
-              key={`muted-${stringIndex}`}
-              style={[
-                styles.mutedStringIndicator,
-                {
-                  left: 20 - (config.dotSize / 2),
-                  top: 35 + (stringIndex * config.stringSpacing) - (config.dotSize / 2),
-                }
-              ]}
-            >
-              <Text
-                style={[
-                  styles.mutedStringText,
-                  {
-                    fontSize: config.fontSize,
-                    color: theme.error || '#ff4444',
-                  }
-                ]}
-              >
-                ✕
-              </Text>
-            </View>
-          );
-        })}
-        
-        {/* Barre indicators */}
-        {fingering.barres?.map((barre, index) => {
-          const fretPosition = barre.fret - baseFret + 1;
-          if (fretPosition < 1 || fretPosition > maxFrets) return null;
-          
-          const x = 20 + (fretPosition * config.fretSpacing) - (config.fretSpacing / 2);
-          const startY = 35 + (barre.startString * config.stringSpacing);
-          const endY = 35 + (barre.endString * config.stringSpacing);
-          const height = endY - startY;
-          
-          return (
-            <View
-              key={`barre-${index}`}
-              style={[
-                styles.barreIndicator,
-                {
-                  width: config.dotSize - 4,
-                  height: height + config.dotSize,
-                  borderRadius: (config.dotSize - 4) / 2,
-                  backgroundColor: theme.primary || '#007AFF',
-                  left: x - ((config.dotSize - 4) / 2),
-                  top: startY - (config.dotSize / 2),
+                  backgroundColor: 'transparent',
+                  left: 25 - (dimensions.dotSize * 0.4),
+                  top: 40 + (stringIndex * dimensions.stringSpacing) - (dimensions.dotSize * 0.4),
                 }
               ]}
             />
           );
         })}
-      </View>
-    );
-  };
-
-  return (
-    <Animated.View 
-      style={[
-        styles.container, 
-        { 
-          backgroundColor: theme.surface,
-          transform: [{ scale: pulseAnim }],
-        }
-      ]}
-    >
-      <Animated.View
-        style={[
-          styles.highlightOverlay,
-          {
-            opacity: highlightAnim,
-            backgroundColor: theme.primary + '20',
-            borderColor: theme.primary,
-          }
-        ]}
-      />
-      
-      <Text style={[styles.chordName, { color: theme.text, fontSize: config.fontSize + 6 }]}>
-        {chord}
-      </Text>
-      
-      {renderFretboard()}
-      
-      <View style={styles.chordInfo}>
-        <Text style={[styles.chordVariation, { color: theme.secondaryText, fontSize: config.fontSize - 1 }]}>
-          {fingering.name}
-        </Text>
-        <Text style={[styles.chordType, { color: theme.secondaryText, fontSize: config.fontSize - 1 }]}>
-          {fingering.type}
-        </Text>
-      </View>
-    </Animated.View>
-  );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    borderRadius: 12,
-    marginVertical: 8,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    position: 'relative',
-  },
-  highlightOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 12,
-    borderWidth: 3,
-    zIndex: 1,
-  },
-  chordName: {
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  fretboardContainer: {
-    position: 'relative',
-  },
-  nut: {
-    position: 'absolute',
-    borderRadius: 1,
-  },
-  fretLine: {
-    position: 'absolute',
-    borderRadius: 0.5,
-  },
-  stringLine: {
-    position: 'absolute',
-  },
-  stringLabel: {
-    position: 'absolute',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  baseFretNumber: {
-    position: 'absolute',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  fingerDot: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  fingerNumber: {
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  openStringIndicator: {
-    position: 'absolute',
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  openStringText: {
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  mutedStringIndicator: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mutedStringText: {
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  barreIndicator: {
-    position: 'absolute',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  chordInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    width: '100%',
-  },
-  chordVariation: {
-    fontStyle: 'italic',
-  },
-  chordType: {
-    fontStyle: 'italic',
-    textTransform: 'capitalize',
-  },
-});
-
-export default Fretboard;
+        
+        {/* Muted string indicators */}
+        {fingering.frets.map((fret, stringIndex) => {
+          if (fret !== -1) return null; // Only show for muted strings
+          
+          return (
+            <Text
+              key={`muted-${stringIndex}`}
+              style={[
+                styles.mutedIndicator,
+                {
+                  fontSize: dimensions.fontSize + 2,
+                  color: theme.error || '#FF3B30',
+                  fontWeight: 'bold',
+                  left: 25 - (dimensions.fontSize / 2),
+                  top: 32 + (stringIndex * dimensions.stringSpacing),
+                  textAlign: 'center',
+                }
+              ]}
+            >
+              ✕
+            </Text>
+          );
+        })}
+        
+        {/* Enhanced finger positions with shadows and better styling */}
+        {fingering.frets.map((fret, stringIndex) => {
+          if (fret <= 0) return null; // Skip open or muted strings
+          
+          const fretPosition = fret - baseFret + 1;
+          if (fretPosition < 1 || fretPosition > maxFrets) return null;
+          
+          const x = 25 + (fretPosition * dimensions.fretSpacing) - (dimensions.fretSpacing / 2);
+          const y = 40 + (stringIndex * dimensions.stringSpacing) - (dimensions.dotSize / 2);
+          const fingerNumber = fingering.fingers?.[stringIndex] || '';
+          
+          return (
+            <Animated.View
+              key={`finger-${stringIndex}`}
+              style={[
+                styles.fingerDot,
+                {
+                  width: dimensions.dotSize,
+                  height: dimensions.dotSize,
+                  borderRadius: dimensions.dotSize / 2,
+                  backgroundColor: theme.primary || '#007AFF',
+                  left: x,
+                  top: y,
+                  borderWidth: 2,
+                  borderColor: '#fff',
+                  elevation: 3,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 3,
+                }
+              ]}
+            >
+              {fingerNumber > 0 && (
+                <Text
+                  style={[
+                    styles.fingerNumber,
+                    {
+                      fontSize: dimensions.fontSize - 2,
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      textAlign: 'center',
+                      lineHeight: dimensions.dotSize,
+                    }
+                  ]}
+                >
+                  {fingerNumber}
+                </Text>
+              )}
+            </Animated.View>
+          );
+        })}
+        
+        {/* Barre chords with enhanced visual */}
+        {fingering.barres?.map((barre, index) => {
+          const fretPosition = barre.fret - baseFret + 1;
+          if

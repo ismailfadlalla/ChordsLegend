@@ -1,15 +1,10 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Switch,
-  Alert,
-  ScrollView,
+    Alert,
+    ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View
 } from 'react-native';
 import { useAuth } from '../context/AuthProvider';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen() {
   const [darkMode, setDarkMode] = useState(true); // Default to dark mode
@@ -125,18 +120,20 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About</Text>
-        <SettingItem
-          title="Version"
-          subtitle="1.0.0"
-        />
+        <Text style={styles.sectionTitle}>Legal & Privacy</Text>
         <SettingItem
           title="Terms of Service"
-          onPress={() => Alert.alert('Info', 'Terms of Service coming soon')}
+          subtitle="Read our terms and conditions"
+          onPress={() => Alert.alert('Terms of Service', 'Please visit our website or check the legal folder in the app documentation for the complete Terms of Service.')}
         />
         <SettingItem
           title="Privacy Policy"
-          onPress={() => Alert.alert('Info', 'Privacy Policy coming soon')}
+          subtitle="How we protect your data"
+          onPress={() => Alert.alert('Privacy Policy', 'Please visit our website or check the legal folder in the app documentation for our complete Privacy Policy.')}
+        />
+        <SettingItem
+          title="App Version"
+          subtitle="2.0.0 - Pi Network Ready"
         />
       </View>
 

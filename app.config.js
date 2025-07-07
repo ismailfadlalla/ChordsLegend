@@ -4,6 +4,16 @@ require('dotenv').config(); // Load .env for this file
 module.exports = {
   name: 'ChordsLegend',
   slug: 'chordslegend',
+  description: 'Professional AI-powered chord detection and analysis mobile application with Pi Network integration for interactive music learning',
+  version: '2.0.0',
+  orientation: 'portrait',
+  icon: './assets/icon.png',
+  userInterfaceStyle: 'automatic',
+  splash: {
+    image: './assets/splash-icon.png',
+    resizeMode: 'contain',
+    backgroundColor: '#ffffff'
+  },
   extra: {
     eas: {
       projectId: "b3bce86d-1a9c-49a3-99f1-26f00a0ffb23"
