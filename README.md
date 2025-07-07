@@ -10,6 +10,7 @@
 ## ✨ Features
 
 ### 🎼 Core Features
+
 - **Real-time Chord Detection** - Analyze any audio source for chord progressions
 - **YouTube Integration** - Overlay chord progressions on YouTube videos
 - **Interactive Fretboard** - Visual guitar chord representations
@@ -17,6 +18,7 @@
 - **Cross-Platform** - iOS, Android, and Web support
 
 ### 🚀 Advanced Features
+
 - **AI-Powered Analysis** - Machine learning chord detection using Librosa
 - **Firebase Authentication** - Secure user management
 - **Cloud Processing** - Backend chord analysis on Railway
@@ -26,6 +28,7 @@
 ## 🏗️ Architecture
 
 ### Frontend (React Native + Expo)
+
 ```
 📱 Mobile App
 ├── 🎵 Audio Analysis Components
@@ -36,6 +39,7 @@
 ```
 
 ### Backend (Python Flask)
+
 ```
 🐍 API Server
 ├── 🧠 AI Chord Detection (NumPy, Librosa)
