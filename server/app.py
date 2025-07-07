@@ -1,9 +1,12 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 import json
 import random
 import os
 
 app = Flask(__name__)
+
+# Configure static folder for legal documents
+app.static_folder = 'legal'
 
 # Simple CORS handling
 @app.after_request
@@ -89,6 +92,34 @@ def analyze_chords():
             "status": "error",
             "error": str(e)
         }), 500
+
+# Legal document routes
+@app.route('/legal/<filename>')
+def serve_legal_document(filename):
+    """Serve legal documents (terms, privacy policy)"""
+    try:
+        # Serve from the legal directory
+        return send_from_directory('legal', filename)
+    except FileNotFoundError:
+        return jsonify({
+            "error": "Legal document not found",
+            "available_documents": [
+                "terms-of-service.html",
+                "privacy-policy.html"
+            ]
+        }), 404
+
+@app.route('/legal/')
+def legal_index():
+    """List available legal documents"""
+    return jsonify({
+        "message": "ChordsLegend Legal Documents",
+        "available_documents": {
+            "terms_of_service": "/legal/terms-of-service.html",
+            "privacy_policy": "/legal/privacy-policy.html"
+        },
+        "note": "These documents are accessible for Pi Network compliance"
+    })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

@@ -18,11 +18,19 @@ class PiNetworkService {
       // Check if Pi SDK is available
       if (typeof window !== 'undefined' && window.Pi) {
         console.log('🥧 Pi Network SDK detected');
+        
+        // Initialize with sandbox configuration
+        await window.Pi.init({
+          version: PI_CONFIG.SDK_CONFIG.version,
+          sandbox: PI_CONFIG.SDK_CONFIG.sandbox
+        });
+        
+        console.log(`🥧 Pi SDK initialized in ${PI_CONFIG.SDK_CONFIG.environment} mode`);
         this.isInitialized = true;
         return true;
       }
       
-      // For React Native, we'll need to use Pi Mobile SDK
+      // For React Native or non-Pi environments
       console.log('🥧 Pi Network SDK not available - using fallback');
       return false;
     } catch (error) {

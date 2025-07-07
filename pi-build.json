@@ -1,0 +1,14 @@
+{
+  "name": "chordslegend-pi-build",
+  "version": "2.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build:pi": "expo export:web --dev",
+    "build:pi-prod": "expo export:web",
+    "serve:pi": "npx serve web-build -s -l 3000",
+    "deploy:pi": "npm run build:pi-prod && npm run serve:pi"
+  },
+  "dependencies": {
+    "serve": "^14.2.0"
+  }
+}

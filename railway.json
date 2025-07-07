@@ -1,13 +1,13 @@
 {
-  "name": "ChordsLegend API",
-  "description": "Chord analysis API for ChordsLegend mobile app",
+  "name": "ChordsLegend",
+  "description": "Chord analysis API for ChordsLegend mobile app - Pi Network Ready",
   "source": {
     "type": "local"
   },
   "env": {},
   "services": {
     "api": {
-      "name": "chordslegend-api",
+      "name": "chordslegend-production",
       "source": {
         "type": "local",
         "path": "./server"

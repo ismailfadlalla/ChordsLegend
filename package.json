@@ -5,9 +5,9 @@
   "keywords": ["music", "chords", "guitar", "learning", "ai", "pi-network", "react-native"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/ismailfadlalla/ChordsLegend-v2.git"
+    "url": "https://github.com/ismailfadlalla/ChordsLegend.git"
   },
-  "homepage": "https://github.com/ismailfadlalla/ChordsLegend-v2",
+  "homepage": "https://github.com/ismailfadlalla/ChordsLegend",
   "scripts": {
     "start": "expo start --dev-client",
     "android": "expo run:android",

@@ -31,7 +31,14 @@ module.exports = {
     SENTRY_ORG: process.env.SENTRY_ORG,
     SENTRY_PROJECT: process.env.SENTRY_PROJECT,
     API_URL: process.env.API_URL,
-    USE_FIREBASE_EMULATORS: process.env.USE_FIREBASE_EMULATORS
+    USE_FIREBASE_EMULATORS: process.env.USE_FIREBASE_EMULATORS,
+    // Pi Network Configuration
+    PI_API_KEY: process.env.PI_API_KEY,
+    PI_APP_ID: process.env.PI_APP_ID,
+    PI_APP_USERNAME: process.env.PI_APP_USERNAME,
+    PI_ENVIRONMENT: process.env.PI_ENVIRONMENT,
+    PI_DEVELOPER_ID: process.env.PI_DEVELOPER_ID,
+    PI_APP_SECRET: process.env.PI_APP_SECRET
   },
   plugins: [],
   android: {
@@ -49,5 +56,18 @@ module.exports = {
         reservedClientId: process.env.IOS_CLIENT_ID
       }
     }
+  },
+  web: {
+    bundler: 'webpack',
+    // Pi Network web configuration
+    favicon: './assets/favicon.png',
+    name: 'ChordsLegend - Pi Network Ready',
+    shortName: 'ChordsLegend',
+    description: 'Professional chord detection and analysis with Pi Network integration',
+    startUrl: '/',
+    display: 'standalone',
+    orientation: 'portrait',
+    themeColor: '#000000',
+    backgroundColor: '#ffffff'
   }
 };
