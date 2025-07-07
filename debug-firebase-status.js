@@ -5,12 +5,12 @@ const { initializeApp, getApps } = require('firebase/app');
 const { getAuth } = require('firebase/auth');
 
 const firebaseConfig = {
-  apiKey: "AIzaSyALL-rz-I971ihPTi3XBxYWesjp4rxekww",
-  authDomain: "chords-legend.firebaseapp.com",
-  projectId: "chords-legend",
-  storageBucket: "chords-legend.firebasestorage.app",
-  messagingSenderId: "509802787175",
-  appId: "1:509802787175:android:983791faee41272ef5bfc2"
+  apiKey: process.env.FIREBASE_API_KEY || "your-api-key-here",
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN || "your-auth-domain-here",
+  projectId: process.env.FIREBASE_PROJECT_ID || "your-project-id-here",
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "your-storage-bucket-here",
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "your-sender-id-here",
+  appId: process.env.FIREBASE_APP_ID || "your-app-id-here"
 };
 
 async function testFirebaseConnection() {

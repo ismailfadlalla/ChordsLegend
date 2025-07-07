@@ -17,7 +17,7 @@ const getFirebaseConfig = () => {
     apiKey: fromConstants?.FIREBASE_API_KEY || 
             process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 
             process.env.FIREBASE_API_KEY || 
-            "AIzaSyALL-rz-I971ihPTi3XBxYWesjp4rxekww",
+            "your-firebase-api-key-here",
             
     authDomain: fromConstants?.FIREBASE_AUTH_DOMAIN || 
                 process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 

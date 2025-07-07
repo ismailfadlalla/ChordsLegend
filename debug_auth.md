@@ -151,12 +151,12 @@ When testing, pay attention to these debug log entries:
 Verify these are set in your `.env` file:
 
 ```
-FIREBASE_API_KEY=AIzaSyALL-rz-I971ihPTi3XBxYWesjp4rxekww
-FIREBASE_AUTH_DOMAIN=chords-legend.firebaseapp.com
-FIREBASE_PROJECT_ID=chords-legend
-FIREBASE_STORAGE_BUCKET=chords-legend.firebasestorage.app
-FIREBASE_MESSAGING_SENDER_ID=509802787175
-FIREBASE_APP_ID=1:509802787175:android:983791faee41272ef5bfc2
+FIREBASE_API_KEY=your-firebase-api-key-here
+FIREBASE_AUTH_DOMAIN=your-auth-domain-here
+FIREBASE_PROJECT_ID=your-project-id-here
+FIREBASE_STORAGE_BUCKET=your-storage-bucket-here
+FIREBASE_MESSAGING_SENDER_ID=your-sender-id-here
+FIREBASE_APP_ID=your-app-id-here
 ```
 
 ## Next Steps if Issues Persist
