@@ -111,8 +111,8 @@ These Terms shall be governed by and construed in accordance with the laws of [Y
 
 For questions about these Terms, please contact us at:
 
-- Email: legal@chordslegend.com
-- Website: https://chordslegend.com
+- **GitHub Issues**: https://github.com/ismailfadlalla/ChordsLegend/issues
+- **GitHub Repository**: https://github.com/ismailfadlalla/ChordsLegend
 
 ---
 
