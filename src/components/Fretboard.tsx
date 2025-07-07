@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Dimensions, Text, View } from 'react-native';
+import { Animated, Dimensions, StyleSheet, Text, View } from 'react-native';
 
 // Get screen dimensions for responsive sizing
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -354,4 +354,111 @@ export const Fretboard: React.FC<FretboardProps> = ({
         {/* Barre chords with enhanced visual */}
         {fingering.barres?.map((barre, index) => {
           const fretPosition = barre.fret - baseFret + 1;
-          if
+          if (fretPosition < 1 || fretPosition > maxFrets) return null;
+          
+          const startString = barre.startString || 0;
+          const endString = barre.endString || 5;
+          const x = 25 + (fretPosition * dimensions.fretSpacing) - (dimensions.fretSpacing / 2);
+          const startY = 40 + (startString * dimensions.stringSpacing) - (dimensions.dotSize / 2);
+          const height = (endString - startString) * dimensions.stringSpacing;
+          
+          return (
+            <View
+              key={`barre-${index}`}
+              style={[
+                styles.barreFinger,
+                {
+                  width: dimensions.dotSize,
+                  height: height,
+                  borderRadius: dimensions.dotSize / 2,
+                  backgroundColor: theme.primary || '#007AFF',
+                  left: x,
+                  top: startY,
+                  borderWidth: 2,
+                  borderColor: '#fff',
+                  elevation: 3,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 3,
+                }
+              ]}
+            />
+          );
+        })}
+        
+        {/* Chord name with improved styling */}
+        <Text
+          style={[
+            styles.chordName,
+            {
+              color: theme.primary || '#007AFF',
+              fontSize: dimensions.fontSize + 6,
+              fontWeight: 'bold',
+              textAlign: 'center',
+              position: 'absolute',
+              bottom: 10,
+              width: '100%',
+              textShadowColor: 'rgba(0,0,0,0.2)',
+              textShadowOffset: { width: 0, height: 1 },
+              textShadowRadius: 2,
+            }
+          ]}
+        >
+          {chord}
+        </Text>
+      </Animated.View>
+    );
+  };
+
+  return renderEnhancedFretboard();
+};
+
+// Styles with better organization
+const styles = StyleSheet.create({
+  fretboardContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  fretboardBackground: {
+    position: 'absolute',
+  },
+  nut: {
+    position: 'absolute',
+  },
+  fretLine: {
+    position: 'absolute',
+  },
+  stringLine: {
+    position: 'absolute',
+  },
+  stringLabel: {
+    position: 'absolute',
+    width: 16,
+  },
+  baseFretNumber: {
+    position: 'absolute',
+  },
+  openStringIndicator: {
+    position: 'absolute',
+  },
+  mutedIndicator: {
+    position: 'absolute',
+    width: 16,
+  },
+  fingerDot: {
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fingerNumber: {
+    alignSelf: 'center',
+  },
+  barreFinger: {
+    position: 'absolute',
+  },
+  chordName: {
+    position: 'absolute',
+  }
+});

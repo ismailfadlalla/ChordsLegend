@@ -1,9 +1,9 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 import json
 import random
 import os
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='legal')
 
 # Simple CORS handling
 @app.after_request
@@ -89,6 +89,11 @@ def analyze_chords():
             "status": "error",
             "error": str(e)
         }), 500
+
+@app.route('/legal/<path:filename>')
+def legal_documents(filename):
+    """Serve legal documents from the legal directory"""
+    return send_from_directory('legal', filename)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
