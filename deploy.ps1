@@ -15,7 +15,8 @@ Write-Host "Building the React/Expo web app..." -ForegroundColor Cyan
 npx expo export:web --clear
 if ($LASTEXITCODE -eq 0) {
     Write-Host "✓ Expo web build successful!" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "✗ Expo web build failed!" -ForegroundColor Red
     exit 1
 }
