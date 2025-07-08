@@ -43,7 +43,7 @@ def test_chords():
 @app.route('/api/analyze-song', methods=['POST'])
 def analyze_song():
     try:
-        data = request.json if request.json else {}
+        data = request.json or {}
         url = data.get('url', '')
         
         # Mock response
@@ -92,6 +92,82 @@ def legal_index():
         },
         "note": "These documents are accessible for Pi Network compliance"
     })
+
+# Domain verification and ownership routes
+@app.route('/domain-verification')
+@app.route('/domain-verification.html')
+def domain_verification():
+    """Serve domain verification page for Pi Network and other platforms"""
+    try:
+        return send_from_directory('.', 'domain-verification.html')
+    except FileNotFoundError:
+        return jsonify({
+            "error": "Domain verification page not found",
+            "status": "This domain is owned by ChordsLegend",
+            "verification_token": "chordslegend-official-app-2025",
+            "contact": "support@chordslegend.com"
+        }), 404
+
+@app.route('/verify-domain')
+def verify_domain_api():
+    """API endpoint for domain verification"""
+    return jsonify({
+        "domain_verified": True,
+        "app_name": "ChordsLegend",
+        "verification_token": "chordslegend-official-app-2025",
+        "owner": "ChordsLegend Development Team",
+        "created": "2025",
+        "domain": request.host,
+        "timestamp": "2025-07-08",
+        "features": [
+            "AI-powered chord detection",
+            "Real-time synchronization",
+            "Cross-platform compatibility",
+            "Pi Network integration",
+            "Professional legal compliance"
+        ]
+    })
+
+# Cross-device compatibility routes
+@app.route('/robots.txt')
+def robots_txt():
+    """Serve robots.txt for better SEO and crawling"""
+    return """User-agent: *
+Allow: /
+Allow: /legal/
+Allow: /domain-verification
+Allow: /verify-domain
+Disallow: /api/
+
+Sitemap: https://chordslegend-production.up.railway.app/sitemap.xml
+"""
+
+@app.route('/sitemap.xml')
+def sitemap():
+    """Generate sitemap for better discoverability"""
+    return """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://chordslegend-production.up.railway.app/</loc>
+        <lastmod>2025-07-08</lastmod>
+        <priority>1.0</priority>
+    </url>
+    <url>
+        <loc>https://chordslegend-production.up.railway.app/legal/terms-of-service.html</loc>
+        <lastmod>2025-07-08</lastmod>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>https://chordslegend-production.up.railway.app/legal/privacy-policy.html</loc>
+        <lastmod>2025-07-08</lastmod>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>https://chordslegend-production.up.railway.app/domain-verification</loc>
+        <lastmod>2025-07-08</lastmod>
+        <priority>0.9</priority>
+    </url>
+</urlset>""", 200, {'Content-Type': 'application/xml'}
 
 # Main route - serve React app or API
 @app.route('/', defaults={'path': ''})
@@ -151,7 +227,7 @@ if __name__ == '__main__':
         try:
             files = os.listdir(WEB_BUILD_PATH)[:5]  # First 5 files
             print("📂 Web build contains:", files)
-        except:
+        except Exception:
             print("⚠️ Could not list web build contents")
     else:
         print("❌ Web build not found at:", WEB_BUILD_PATH)

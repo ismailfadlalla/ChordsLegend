@@ -3,11 +3,13 @@
   "description": "Professional AI-powered chord detection and analysis mobile application with Pi Network integration for interactive music learning",
   "display": "standalone",
   "lang": "en",
-  "name": "ChordsLegend - Pi Network Ready",
+  "name": "ChordsLegend - Professional Chord Analysis",
+  "scope": "/",
   "short_name": "ChordsLegend",
   "start_url": "/",
-  "theme_color": "#000000",
-  "orientation": "portrait",
+  "theme_color": "#1a1a2e",
+  "crossorigin": "use-credentials",
+  "orientation": "any",
   "related_applications": [
     {
       "platform": "itunes",
@@ -19,5 +21,5 @@
       "id": "com.chordslegend"
     }
   ],
-  "prefer_related_applications": true
+  "prefer_related_applications": false
 }

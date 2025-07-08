@@ -1,6 +1,6 @@
 {
   "files": {
-    "main.js": "/ismailfadlalla/ChordsLegend/static/js/main.8efc6c97.js",
+    "main.js": "/ismailfadlalla/ChordsLegend/static/js/main.68c77845.js",
     "static/js/273.8f92f3bb.js": "/ismailfadlalla/ChordsLegend/static/js/273.8f92f3bb.js",
     "favicon.ico": "/ismailfadlalla/ChordsLegend/favicon.ico",
     "index.html": "/ismailfadlalla/ChordsLegend/index.html",
@@ -8,11 +8,11 @@
     "favicon-16.png": "/ismailfadlalla/ChordsLegend/favicon-16.png",
     "manifest.json": "/ismailfadlalla/ChordsLegend/manifest.json",
     "serve.json": "/ismailfadlalla/ChordsLegend/serve.json",
-    "main.8efc6c97.js.map": "/ismailfadlalla/ChordsLegend/static/js/main.8efc6c97.js.map",
+    "main.68c77845.js.map": "/ismailfadlalla/ChordsLegend/static/js/main.68c77845.js.map",
     "273.8f92f3bb.js.map": "/ismailfadlalla/ChordsLegend/static/js/273.8f92f3bb.js.map"
   },
   "entrypoints": [
     "static/js/273.8f92f3bb.js",
-    "static/js/main.8efc6c97.js"
+    "static/js/main.68c77845.js"
   ]
 }

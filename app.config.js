@@ -59,15 +59,37 @@ module.exports = {
   },
   web: {
     bundler: 'webpack',
-    // Pi Network web configuration
+    // Enhanced web configuration for cross-device compatibility
     favicon: './assets/favicon.png',
-    name: 'ChordsLegend - Pi Network Ready',
+    name: 'ChordsLegend - Professional Chord Analysis',
     shortName: 'ChordsLegend',
-    description: 'Professional chord detection and analysis with Pi Network integration',
+    description: 'Professional AI-powered chord detection and analysis mobile application with Pi Network integration for interactive music learning',
     startUrl: '/',
     display: 'standalone',
-    orientation: 'portrait',
-    themeColor: '#000000',
-    backgroundColor: '#ffffff'
+    orientation: 'any',
+    themeColor: '#1a1a2e',
+    backgroundColor: '#ffffff',
+    // Progressive Web App capabilities
+    preferRelatedApplications: false,
+    // Cross-platform compatibility
+    crossorigin: 'use-credentials',
+    // Enhanced manifest for better device support
+    scope: '/',
+    categories: ['music', 'education', 'entertainment'],
+    // Domain verification and ownership
+    screenshots: [
+      {
+        src: '/assets/screenshots/mobile.png',
+        sizes: '320x640',
+        type: 'image/png',
+        platform: 'mobile'
+      },
+      {
+        src: '/assets/screenshots/desktop.png', 
+        sizes: '1280x720',
+        type: 'image/png',
+        platform: 'wide'
+      }
+    ]
   }
 };
