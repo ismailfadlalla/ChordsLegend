@@ -1,5 +1,5 @@
 // Use local backend for testing since your Flask server is running on port 5000
-const API_BASE = 'http://127.0.0.1:5000';
+const API_BASE = 'https://chordslegend.up.railway.app';
 
 export const apiCall = async (endpoint: string, method: string = 'GET', data?: any) => {
   const url = `${API_BASE}${endpoint}`;
