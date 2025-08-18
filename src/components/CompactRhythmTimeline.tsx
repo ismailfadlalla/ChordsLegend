@@ -23,41 +23,189 @@ const CompactRhythmTimeline: React.FC<CompactRhythmTimelineProps> = ({
   onSeekToTime,
 }) => {
   const scrollViewRef = useRef<ScrollView>(null);
+  const lastScrollInfo = useRef<{ index: number; time: number }>({ index: -1, time: 0 }); // Track last scrolled position and time
 
-  // Auto-scroll to current position
+  // CRITICAL FIX: Auto-scroll to current position with stable highlighting and timing precision
   useEffect(() => {
     console.log('🎹 CompactRhythmTimeline: currentTime updated to', currentTime.toFixed(1), 'isPlaying:', isPlaying);
     
-    if (scrollViewRef.current && isPlaying) {
-      // Find current chord index
-      const currentIndex = chordProgression.findIndex((chord, index) => {
-        const nextChord = chordProgression[index + 1];
-        return currentTime >= chord.startTime && 
-               (!nextChord || currentTime < nextChord.startTime);
-      });
+    if (scrollViewRef.current && chordProgression.length > 0) {
+      // OPTIMIZED: Find current chord index with direct iteration for better performance and control
+      let currentIndex = -1;
+      let debugInfo = {};
+      
+      // First pass: find exact match within chord time range
+      for (let i = 0; i < chordProgression.length; i++) {
+        const chord = chordProgression[i];
+        if (!chord) {
+          continue;
+        }
+        
+        const chordEnd = chord.startTime + chord.duration;
+        // Use a small tolerance window for floating point precision
+        const isInRange = currentTime >= (chord.startTime - 0.1) && currentTime < (chordEnd + 0.1);
+        
+        if (isInRange) {
+          currentIndex = i;
+          debugInfo = {
+            index: i,
+            chord: chord.chord,
+            timeRange: `${chord.startTime.toFixed(1)}s - ${chordEnd.toFixed(1)}s`,
+            currentTime: currentTime.toFixed(1),
+            progress: `${Math.min(100, Math.max(0, ((currentTime - chord.startTime) / chord.duration * 100))).toFixed(0)}%`
+          };
+          break;
+        }
+      }
+      
+      // If no direct match but we're playing, find appropriate fallback
+      if (currentIndex === -1 && isPlaying) {
+        // Before first chord
+        if (currentTime < chordProgression[0].startTime) {
+          currentIndex = 0;
+          debugInfo = {
+            reason: 'PRE_SONG',
+            chord: chordProgression[0].chord,
+            timeUntilStart: (chordProgression[0].startTime - currentTime).toFixed(1) + 's'
+          };
+        }
+        // After last chord
+        else if (currentTime > chordProgression[chordProgression.length - 1].startTime + 
+                           chordProgression[chordProgression.length - 1].duration) {
+          currentIndex = chordProgression.length - 1;
+          debugInfo = {
+            reason: 'POST_SONG',
+            chord: chordProgression[currentIndex].chord
+          };
+        }
+        // In a gap between chords
+        else {
+          // Find the previous and next chords
+          let prevIndex = -1;
+          let nextIndex = -1;
+          
+          for (let i = 0; i < chordProgression.length - 1; i++) {
+            const currentEnd = chordProgression[i].startTime + chordProgression[i].duration;
+            const nextStart = chordProgression[i + 1].startTime;
+            
+            if (currentTime >= currentEnd && currentTime < nextStart) {
+              prevIndex = i;
+              nextIndex = i + 1;
+              break;
+            }
+          }
+          
+          if (prevIndex >= 0 && nextIndex >= 0) {
+            // We're in a gap, use the previous chord as fallback
+            currentIndex = prevIndex;
+            debugInfo = {
+              reason: 'IN_GAP',
+              prevChord: chordProgression[prevIndex].chord,
+              nextChord: chordProgression[nextIndex].chord,
+              gapPosition: `${(currentTime - (chordProgression[prevIndex].startTime + chordProgression[prevIndex].duration)).toFixed(1)}s into gap`
+            };
+          } else {
+            // No clear gap, find nearest chord
+            currentIndex = chordProgression.reduce((nearest, chord, index) => {
+              const currentDistance = Math.abs(chord.startTime + (chord.duration / 2) - currentTime);
+              const nearestDistance = Math.abs(chordProgression[nearest].startTime + 
+                                           (chordProgression[nearest].duration / 2) - currentTime);
+              return currentDistance < nearestDistance ? index : nearest;
+            }, 0);
+            
+            debugInfo = {
+              reason: 'NEAREST',
+              chord: chordProgression[currentIndex].chord,
+              distance: Math.abs(chordProgression[currentIndex].startTime - currentTime).toFixed(1) + 's'
+            };
+          }
+        }
+      }
 
+      if (Object.keys(debugInfo).length > 0) {
+        console.log('🎹 CHORD DETECTION:', debugInfo);
+      }
+      
+      // IMPROVED SCROLL LOGIC: More stable, less jumpy scrolling
       if (currentIndex >= 0) {
-        const currentChord = chordProgression[currentIndex];
-        console.log('🎹 Current chord in timeline:', currentChord.chord, 'at index:', currentIndex);
+        // Only scroll if:
+        // 1. It's a different chord than last time
+        // 2. OR enough time has passed (prevents excessive scrolling)
+        // 3. OR it's the first scroll action (index was -1)
+        const isNewChord = currentIndex !== lastScrollInfo.current.index;
+        const timeSinceLastScroll = Date.now() - lastScrollInfo.current.time;
+        const isTimeForRefresh = timeSinceLastScroll > 3000; // At least 3 seconds between scrolls for same chord
+        const isFirstScroll = lastScrollInfo.current.index === -1;
         
-        // Scroll to show current chord in center
-        const itemWidth = 80; // Width of each chord item
-        const scrollPosition = Math.max(0, (currentIndex * itemWidth) - 150); // Center with offset
+        const shouldScroll = isNewChord || isTimeForRefresh || isFirstScroll;
         
-        scrollViewRef.current.scrollTo({ 
-          x: scrollPosition, 
-          animated: true 
-        });
+        if (shouldScroll) {
+          console.log('🎹 SCROLLING TO CHORD:', { 
+            index: currentIndex,
+            chord: chordProgression[currentIndex].chord,
+            reason: isNewChord ? 'NEW_CHORD' : isFirstScroll ? 'FIRST_SCROLL' : 'REFRESH'
+          });
+          
+          // Calculate scroll position for optimal viewing
+          const itemWidth = 80; // Width of each chord item + margin
+          const screenWidth = 300; // Approximate container width
+          const targetPosition = screenWidth * 0.30; // 30% from left = good viewing position
+          
+          // CRITICAL FIX: More consistent scroll position calculation
+          const scrollPosition = Math.max(0, (currentIndex * itemWidth) - targetPosition);
+          
+          // Smoother scrolling when playing, immediate when seeking
+          scrollViewRef.current.scrollTo({ 
+            x: scrollPosition, 
+            animated: isPlaying && !isFirstScroll // Animate unless it's the first scroll
+          });
+          
+          // Update last scrolled position with timestamp
+          lastScrollInfo.current = { index: currentIndex, time: Date.now() };
+        }
       }
     }
   }, [currentTime, isPlaying, chordProgression]);
 
   const getCurrentChordIndex = () => {
-    return chordProgression.findIndex((chord, index) => {
-      const nextChord = chordProgression[index + 1];
-      return currentTime >= chord.startTime && 
-             (!nextChord || currentTime < nextChord.startTime);
+    // Enhanced chord index calculation with better stability
+    if (chordProgression.length === 0) {
+      return -1;
+    }
+    
+    // Find the currently active chord based on timing
+    const activeIndex = chordProgression.findIndex((chord, index) => {
+      const chordEnd = chord.startTime + chord.duration;
+      return currentTime >= chord.startTime && currentTime < chordEnd;
     });
+    
+    // If we found an active chord, use it
+    if (activeIndex !== -1) {
+      return activeIndex;
+    }
+    
+    // If no active chord and we're playing, find the most appropriate chord to highlight
+    if (isPlaying) {
+      // If we're before the first chord, highlight the first chord
+      if (currentTime < chordProgression[0].startTime) {
+        return 0;
+      }
+      
+      // If we're after the last chord, highlight the last chord
+      const lastChord = chordProgression[chordProgression.length - 1];
+      if (currentTime >= lastChord.startTime + lastChord.duration) {
+        return chordProgression.length - 1;
+      }
+      
+      // If we're in a silence period between chords, find the next upcoming chord
+      const nextIndex = chordProgression.findIndex(chord => currentTime < chord.startTime);
+      if (nextIndex !== -1) {
+        return nextIndex;
+      }
+    }
+    
+    // Default: no highlighting during silence when not playing
+    return -1;
   };
 
   const formatTime = (seconds: number) => {
@@ -87,10 +235,17 @@ const CompactRhythmTimeline: React.FC<CompactRhythmTimelineProps> = ({
         contentContainerStyle={styles.timelineContent}
       >
         {chordProgression.map((chord, index) => {
+          // Use enhanced chord index calculation for stable highlighting
+          const currentChordIndex = getCurrentChordIndex();
           const isActive = index === currentChordIndex;
           const isPast = currentTime > chord.startTime + chord.duration;
           const isNext = index === currentChordIndex + 1;
           const isUpcoming = index > currentChordIndex && index <= currentChordIndex + 3;
+          
+          // Enhanced highlighting that persists better during scrolling
+          const isHighlighted = isActive || 
+                               (currentChordIndex === -1 && index === 0 && currentTime < chord.startTime) ||
+                               (currentChordIndex === -1 && index === chordProgression.length - 1 && currentTime > chord.startTime + chord.duration);
           
           // Calculate progress within current chord
           const progress = isActive ? 
@@ -103,86 +258,122 @@ const CompactRhythmTimeline: React.FC<CompactRhythmTimelineProps> = ({
               style={[
                 styles.chordItem,
                 {
-                  backgroundColor: isActive 
-                    ? theme.primary + '30'
+                  backgroundColor: isHighlighted 
+                    ? theme.primary + '40'
                     : isNext 
-                      ? theme.secondary + '20'
+                      ? theme.secondary + '25'
                       : isUpcoming 
                         ? theme.surface + '80'
                         : isPast 
-                          ? theme.divider + '20'
+                          ? theme.divider + '30'
                           : theme.surface,
-                  borderColor: isActive 
+                  borderColor: isHighlighted 
                     ? theme.primary 
                     : isNext 
                       ? theme.secondary 
                       : 'transparent',
-                  borderWidth: isActive || isNext ? 2 : 1,
+                  borderWidth: isHighlighted ? 3 : isNext ? 2 : 1,
+                  shadowColor: isHighlighted ? theme.primary : 'transparent',
+                  shadowOpacity: isHighlighted ? 0.5 : 0,
+                  shadowRadius: isHighlighted ? 4 : 0,
+                  shadowOffset: isHighlighted ? { width: 0, height: 2 } : { width: 0, height: 0 },
+                  elevation: isHighlighted ? 4 : 0,
                 }
               ]}
               onPress={() => onSeekToTime(chord.startTime)}
             >
-              {/* Progress bar for current chord */}
-              {isActive && (
-                <View style={[styles.progressBar, { backgroundColor: theme.divider }]}>
+              {/* Progress bar for current chord - Enhanced visibility */}
+              {isHighlighted && (
+                <View style={[styles.progressBar, { backgroundColor: theme.divider + '60' }]}>
                   <View 
                     style={[
                       styles.progressFill,
                       { 
                         backgroundColor: theme.primary,
-                        width: `${progress * 100}%`
+                        width: `${progress * 100}%`,
+                        shadowColor: theme.primary,
+                        shadowOpacity: 0.8,
+                        shadowRadius: 2,
+                        shadowOffset: { width: 0, height: 0 },
+                        elevation: 2,
                       }
                     ]}
                   />
                 </View>
               )}
               
-              {/* Chord name */}
+              {/* Chord name - Enhanced visibility for highlighted chord */}
               <Text style={[
                 styles.chordName,
                 {
-                  color: isActive 
-                    ? theme.primary 
+                  color: isHighlighted 
+                    ? '#FFFFFF'
                     : isNext 
                       ? theme.secondary
                       : isPast 
                         ? theme.secondaryText + '80'
                         : theme.text,
-                  fontWeight: isActive ? 'bold' : isNext ? '600' : 'normal',
-                  fontSize: isActive ? 16 : 14
+                  fontWeight: isHighlighted ? '900' : isNext ? '600' : 'normal',
+                  fontSize: isHighlighted ? 18 : isNext ? 16 : 14,
+                  textShadowColor: isHighlighted ? 'rgba(0,0,0,0.5)' : 'transparent',
+                  textShadowOffset: isHighlighted ? { width: 1, height: 1 } : { width: 0, height: 0 },
+                  textShadowRadius: isHighlighted ? 2 : 0,
                 }
               ]}>
                 {chord.chord}
               </Text>
               
-              {/* Time indicator */}
+              {/* Time indicator - Enhanced visibility for highlighted chord */}
               <Text style={[
                 styles.timeText,
                 { 
-                  color: isActive ? theme.primary : theme.secondaryText,
-                  fontSize: isActive ? 11 : 10
+                  color: isHighlighted ? '#FFFFFF' : isNext ? theme.secondary : theme.secondaryText,
+                  fontSize: isHighlighted ? 13 : isNext ? 12 : 11,
+                  fontWeight: isHighlighted ? 'bold' : 'normal',
+                  textShadowColor: isHighlighted ? 'rgba(0,0,0,0.5)' : 'transparent',
+                  textShadowOffset: isHighlighted ? { width: 1, height: 1 } : { width: 0, height: 0 },
+                  textShadowRadius: isHighlighted ? 1 : 0,
                 }
               ]}>
                 {formatTime(chord.startTime)}
               </Text>
               
-              {/* Duration indicator */}
+              {/* Duration indicator - Enhanced for highlighted chord */}
               <Text style={[
                 styles.durationText,
-                { color: theme.secondaryText }
+                { 
+                  color: isHighlighted ? '#FFFFFF' : theme.secondaryText,
+                  fontWeight: isHighlighted ? 'bold' : 'normal',
+                  textShadowColor: isHighlighted ? 'rgba(0,0,0,0.5)' : 'transparent',
+                  textShadowOffset: isHighlighted ? { width: 1, height: 1 } : { width: 0, height: 0 },
+                  textShadowRadius: isHighlighted ? 1 : 0,
+                }
               ]}>
-                {chord.duration}s
+                {chord.duration.toFixed(1)}s
               </Text>
               
-              {/* Status indicators */}
+              {/* Status indicators - Enhanced visibility */}
               {isActive && isPlaying && (
-                <View style={[styles.playingIndicator, { backgroundColor: theme.primary }]}>
-                  <Text style={styles.playingIcon}>♪</Text>
+                <View style={[styles.playingIndicator, { 
+                  backgroundColor: '#FFFFFF',
+                  shadowColor: theme.primary,
+                  shadowOpacity: 0.8,
+                  shadowRadius: 3,
+                  shadowOffset: { width: 0, height: 2 },
+                  elevation: 3,
+                }]}>
+                  <Text style={[styles.playingIcon, { color: theme.primary }]}>♪</Text>
                 </View>
               )}
               
               {isNext && (
-                <Text style={[styles.nextLabel, { color: theme.secondary }]}>
+                <Text style={[styles.nextLabel, { 
+                  color: theme.secondary,
+                  fontWeight: 'bold',
+                  textShadowColor: 'rgba(255,255,255,0.8)',
+                  textShadowOffset: { width: 1, height: 1 },
+                  textShadowRadius: 1,
+                }]}>
                   NEXT
                 </Text>
               )}
@@ -279,7 +470,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   durationText: {
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: 'monospace',
   },
   playingIndicator: {
@@ -294,13 +485,13 @@ const styles = StyleSheet.create({
   },
   playingIcon: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 'bold',
   },
   nextLabel: {
     position: 'absolute',
     bottom: 2,
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: 'bold',
   },
   controls: {

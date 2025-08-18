@@ -15,6 +15,10 @@
     "skipLibCheck": true,
     "strict": false,
     "target": "esnext",
+    "types": [
+      "react-native",
+      "node"
+    ],
     "paths": {
       "@env": [
         "./src/types/env.d.ts"
@@ -23,6 +27,7 @@
   },
   "include": [
     "src/**/*",
+    "src/types/**/*",
     "App.js",
     "*.ts",
     "*.tsx"

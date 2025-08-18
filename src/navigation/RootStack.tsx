@@ -2,7 +2,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import AuthScreen from '../screens/AuthScreen';
-import ChordPlayerScreen from '../screens/ChordPlayerScreen';
+import ChordPlayerScreen from '../screens/ChordPlayerScreen.debug';
 import HomeScreen from '../screens/HomeScreen';
 import LibraryScreen from '../screens/LibraryScreen';
 import SearchScreen from '../screens/SearchScreen';

@@ -1,0 +1,199 @@
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import Constants from 'expo-constants';
+import React, { useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+// Firebase imports
+import { getApps, initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+
+// Import proper screens from src/screens
+import ChordPlayerScreen from './src/screens/ChordPlayerScreen';
+import LibraryScreen from './src/screens/LibraryScreen';
+import SearchScreen from './src/screens/SearchScreen';
+import AuthScreen from './src/screens/AuthScreen';
+
+console.log('🎵 Simple Navigation with Home Layout Loading...');
+console.log('🌍 ENV TEST:', process.env.EXPO_PUBLIC_YOUTUBE_API_KEY);
+
+const Stack = createNativeStackNavigator();
+
+// Firebase configuration
+const getFirebaseConfig = () => {
+  const fromConstants = Constants.expoConfig?.extra;
+  
+  return {
+    apiKey: fromConstants?.FIREBASE_API_KEY || process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+    authDomain: fromConstants?.FIREBASE_AUTH_DOMAIN || process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: fromConstants?.FIREBASE_PROJECT_ID || process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: fromConstants?.FIREBASE_STORAGE_BUCKET || process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: fromConstants?.FIREBASE_MESSAGING_SENDER_ID || process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: fromConstants?.FIREBASE_APP_ID || process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+    measurementId: fromConstants?.FIREBASE_MEASUREMENT_ID || process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID
+  };
+};
+
+// Initialize Firebase
+const firebaseConfig = getFirebaseConfig();
+if (getApps().length === 0) {
+  initializeApp(firebaseConfig);
+}
+
+// Initialize Firebase Auth
+getAuth();
+
+console.log('🎵 Simple Navigation Module Loaded');
+
+// Simple HomeScreen component
+function HomeScreen({ navigation }) {
+  console.log('🎵 HomeScreen Rendering...');
+  
+  const handleButtonPress = (action) => {
+    console.log(`🎵 Button pressed: ${action}`);
+    
+    // Navigate to different screens
+    if (action === 'Search') {
+      navigation.navigate('Search');
+    } else if (action === 'Library') {
+      navigation.navigate('Library');
+    } else if (action === 'Auth') {
+      navigation.navigate('Auth');
+    }
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
+      {/* Welcome Header */}
+      <View style={styles.header}>
+        <Text style={styles.welcomeText}>
+          Welcome to ChordsLegend!
+        </Text>
+        <Text style={styles.subtitle}>
+          Discover chords for your favorite songs
+        </Text>
+      </View>
+
+      {/* Quick Actions */}
+      <View style={styles.quickActions}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => handleButtonPress('Search')}
+        >
+          <Text style={styles.actionButtonIcon}>🔍</Text>
+          <Text style={styles.actionButtonText}>Search Songs</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => handleButtonPress('Library')}
+        >
+          <Text style={styles.actionButtonIcon}>📚</Text>
+          <Text style={styles.actionButtonText}>My Library</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => handleButtonPress('Auth')}
+        >
+          <Text style={styles.actionButtonIcon}>🔐</Text>
+          <Text style={styles.actionButtonText}>Login</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+// Main App Component
+export default function App() {
+  console.log('🎵 Full Navigation App Rendering...');
+
+  return (
+    <>
+      <NavigationContainer>
+        <Stack.Navigator
+          initialRouteName="Home"
+          screenOptions={{
+            headerStyle: { backgroundColor: '#1a1a1a' },
+            headerTintColor: '#fff',
+            headerTitleStyle: { fontWeight: 'bold' }
+          }}
+        >
+          <Stack.Screen 
+            name="Home" 
+            component={HomeScreen}
+            options={{ title: '🎵 ChordsLegend' }}
+          />
+          <Stack.Screen 
+            name="Search" 
+            component={SearchScreen}
+            options={{ title: '🔍 Search Songs' }}
+          />
+          <Stack.Screen 
+            name="Library" 
+            component={LibraryScreen}
+            options={{ title: '📚 My Library' }}
+          />
+          <Stack.Screen 
+            name="ChordPlayer" 
+            component={ChordPlayerScreen}
+            options={{ title: '🎼 Chord Analysis' }}
+          />
+          <Stack.Screen 
+            name="Auth" 
+            component={AuthScreen}
+            options={{ title: '🔐 Authentication' }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </>
+  );
+}
+
+// Styles
+const styles = StyleSheet.create({
+  header: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  welcomeText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#aaa',
+    textAlign: 'center',
+  },
+  quickActions: {
+    flex: 1,
+    paddingHorizontal: 30,
+    paddingTop: 30,
+  },
+  actionButton: {
+    backgroundColor: '#333',
+    borderRadius: 15,
+    padding: 25,
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  actionButtonIcon: {
+    fontSize: 24,
+    marginRight: 15,
+  },
+  actionButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+  },
+});

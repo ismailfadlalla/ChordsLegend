@@ -1,82 +1,178 @@
 import { NavigationContainer } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React from 'react';
+import { Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+// Import AuthProvider for development
 import { AuthProvider } from './src/context/AuthProvider';
-// import { MockAuthProvider as AuthProvider } from './src/context/MockAuthProvider';
-import { Platform } from 'react-native';
-import EnhancedErrorBoundary from './src/components/EnhancedErrorBoundary';
-import { PI_CONFIG } from './src/config/piConfig';
-import RootStack from './src/navigation/RootStack';
-import { enhanceForPWA, getBrowserCompatibility, logDeviceCapabilities } from './src/utils/deviceCompatibility';
 
-export default function App() {
-  const [isPiEnvironment, setIsPiEnvironment] = useState(false);
-  const [deviceCompatibility, setDeviceCompatibility] = useState(null);
+// Import SearchScreen
+import AuthScreen from './src/screens/AuthScreen';
+import PlayerScreen from './src/screens/PlayerScreen';
+import LibraryScreen from './src/screens/LibraryScreen';
+import SearchScreen from './src/screens/SearchScreen';
 
-  useEffect(() => {
-    // Initialize cross-device compatibility and PWA enhancements
-    const initCompatibility = () => {
-      try {
-        // Enhance for PWA if on web
-        enhanceForPWA();
-        
-        // Log device capabilities for debugging
-        const compatibility = logDeviceCapabilities();
-        setDeviceCompatibility(compatibility);
-        
-        // Check browser compatibility and warn if needed
-        const browserCheck = getBrowserCompatibility();
-        if (!browserCheck.compatible && Platform.OS === 'web') {
-          console.warn('Browser compatibility issues detected:', browserCheck.issues);
-          // Show compatibility warning to user if needed
-          if (typeof window !== 'undefined' && browserCheck.issues.length > 0) {
-            console.log('ChordsLegend may not work optimally in this browser. Consider using Chrome, Firefox, or Safari.');
-          }
-        }
-      } catch (error) {
-        console.error('Error initializing compatibility features:', error);
-      }
-    };
+const Stack = createNativeStackNavigator();
 
-    // Initialize Pi Browser integration if running in Pi environment
-    const initPi = async () => {
-      try {
-        const isPiBrowser = PI_CONFIG.isPiBrowser();
-        setIsPiEnvironment(isPiBrowser);
-        
-        if (isPiBrowser) {
-          console.log('🥧 ChordsLegend running in Pi Browser environment');
-          console.log('Sandbox mode:', PI_CONFIG.SANDBOX_MODE);
-          console.log('Environment:', PI_CONFIG.ENVIRONMENT);
-          
-          // Initialize Pi SDK if available
-          if (typeof window !== 'undefined' && window.Pi) {
-            await window.Pi.init({
-              version: PI_CONFIG.SDK_CONFIG.version,
-              sandbox: PI_CONFIG.SDK_CONFIG.sandbox
-            });
-            console.log('✅ Pi SDK initialized successfully');
-          }
-        } else {
-          console.log('🌐 ChordsLegend running in standard web environment');
-        }
-      } catch (error) {
-        console.error('❌ Pi SDK initialization failed:', error);
-      }
-    };
+// Home Screen Component
+function HomeScreen({ navigation }) {
+  console.log('🚨🚨🚨 HOME SCREEN IN APP.JS RENDERING!!! 🚨🚨🚨');
+  console.log('🎵 HomeScreen rendering...');
 
-    // Initialize both compatibility and Pi features
-    initCompatibility();
-    initPi();
-  }, []);
+  const handleTest = () => {
+    Alert.alert('Test', 'App is working with navigation!');
+  };
+
+  const handleTestAPI = async () => {
+    console.log('🧪 Testing App Features...');
+    
+    try {
+      Alert.alert('Test Complete', 'App is working correctly!');
+    } catch (error) {
+      console.error('Test Failed:', error);
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  const handleSearch = () => {
+    console.log('🔍 Navigating to Search...');
+    navigation.navigate('Search');
+  };
+
+  const handleLibrary = () => {
+    console.log('📚 Navigating to Library...');
+    navigation.navigate('Library');
+  };
+
+  const handleAuth = () => {
+    console.log('👤 Navigating to Auth...');
+    navigation.navigate('Auth');
+  };
 
   return (
-    <EnhancedErrorBoundary>
-      <AuthProvider>
-        <NavigationContainer>
-          <RootStack />
-        </NavigationContainer>
-      </AuthProvider>
-    </EnhancedErrorBoundary>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        <Text style={[styles.title, { color: '#ff0000', fontSize: 24 }]}>🚨 APP.JS DEBUG MODE ACTIVE 🚨</Text>
+        <Text style={styles.title}>🎵 Chords Legend</Text>
+        <Text style={styles.subtitle}>Professional Music App</Text>
+        
+        <TouchableOpacity style={styles.button} onPress={handleTest}>
+          <Text style={styles.buttonText}>Test App</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.button, { backgroundColor: '#e74c3c' }]} onPress={handleTestAPI}>
+          <Text style={styles.buttonText}>🧪 Test Unified API</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.button, { backgroundColor: '#27ae60' }]} onPress={handleSearch}>
+          <Text style={styles.buttonText}>🔍 Search</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.button, { backgroundColor: '#9b59b6' }]} onPress={handleLibrary}>
+          <Text style={styles.buttonText}>📚 Library</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.button, { backgroundColor: '#f39c12' }]} onPress={handleAuth}>
+          <Text style={styles.buttonText}>👤 Account</Text>
+        </TouchableOpacity>
+        
+        <Text style={styles.status}>✅ Professional App Ready!</Text>
+      </View>
+    </SafeAreaView>
   );
 }
 
+export default function App() {
+  console.log('🚨🚨🚨 MAIN APP.JS LOADING!!! 🚨🚨🚨');
+  console.log('🎵 Professional App Loading...');
+
+  return (
+    <AuthProvider>
+      <NavigationContainer>
+        <Stack.Navigator
+          initialRouteName="Home"
+          screenOptions={{
+            headerStyle: { backgroundColor: '#2c3e50' },
+            headerTintColor: '#ecf0f1',
+            headerTitleStyle: { fontWeight: 'bold' }
+          }}
+        >
+        <Stack.Screen 
+          name="Home" 
+          component={HomeScreen} 
+          options={{ title: '🎵 Chords Legend' }}
+        />
+        <Stack.Screen 
+          name="Search" 
+          component={SearchScreen} 
+          options={{ title: '🔍 Search Songs' }}
+        />
+        <Stack.Screen 
+          name="Library" 
+          component={LibraryScreen} 
+          options={{ title: '📚 My Library' }}
+        />
+        <Stack.Screen 
+          name="Auth" 
+          component={AuthScreen} 
+          options={{ title: '👤 Signup / Signin' }}
+        />
+        <Stack.Screen 
+          name="Player" 
+          component={PlayerScreen} 
+          options={{ title: '🎸 Chord Player' }}
+        />
+        <Stack.Screen 
+          name="ChordPlayer" 
+          component={PlayerScreen} 
+          options={{ title: '🎸 Chord Progression Sheet' }}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
+    </AuthProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#1a1a2e',
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 18,
+    color: '#bbb',
+    marginBottom: 40,
+  },
+  button: {
+    backgroundColor: '#3498db',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+    marginVertical: 10,
+    minWidth: 200,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  status: {
+    marginTop: 40,
+    color: '#2ecc71',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});

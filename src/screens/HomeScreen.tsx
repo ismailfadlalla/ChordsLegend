@@ -2,8 +2,17 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
 import {
-  ScrollView, StyleSheet, Text, TouchableOpacity, View
+    ScrollView, StyleSheet, Text, TouchableOpacity, View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Type assertion for React Native components to fix JSX errors
+const TypedSafeAreaView = SafeAreaView as React.ComponentType<any>;
+const TypedScrollView = ScrollView as React.ComponentType<any>;
+const TypedView = View as React.ComponentType<any>;
+const TypedText = Text as React.ComponentType<any>;
+const TypedTouchableOpacity = TouchableOpacity as React.ComponentType<any>;
+
 import { useAuth } from '../context/AuthProvider';
 import { RootStackParamList } from '../navigation/types';
 
@@ -15,6 +24,9 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
 export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const { user, logout, isConnected, isLoading } = useAuth();
+
+  console.log('🚨🚨🚨 HOME SCREEN IS LOADING!!! 🚨🚨🚨');
+  console.log('🏠 HomeScreen render - user:', user?.email, 'isConnected:', isConnected, 'isLoading:', isLoading);
 
   const handleAuthAction = () => {
     if (user) {
@@ -31,74 +43,81 @@ export default function HomeScreen() {
 
 
   return (
-    <ScrollView style={styles.container}>
-      {/* User Welcome Section */}
-      <View style={styles.header}>
-        <Text style={styles.welcomeText}>
-          {user ? `Welcome back, ${user?.email?.split('@')[0]}!` : 'Welcome to ChordsLegend!'}
-        </Text>
-        <Text style={styles.subtitle}>
-          Discover chords for your favorite songs
-        </Text>
-      </View>
+    <TypedSafeAreaView style={styles.safeArea}>
+      <TypedScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        {/* User Welcome Section */}
+        <TypedView style={styles.header}>
+          <TypedText style={styles.welcomeText}>
+            🚨 DEBUG MODE ACTIVE 🚨
+          </TypedText>
+          <TypedText style={styles.welcomeText}>
+            {user ? `Welcome back, ${user?.email?.split('@')[0]}!` : 'Welcome!'}
+          </TypedText>
+        </TypedView>
 
-      <View style={styles.quickActions}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('Search')}
-        >
-          <Text style={styles.actionIcon}>🔍</Text>
-          <Text style={styles.actionText}>Search Songs</Text>
-        </TouchableOpacity>
+        <TypedView style={styles.quickActions}>
+          <TypedTouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Search')}
+          >
+            <TypedText style={styles.actionIcon}>🔍</TypedText>
+            <TypedText style={styles.actionText}>Search Songs</TypedText>
+          </TypedTouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('Library')}
-        >
-          <Text style={styles.actionIcon}>📚</Text>
-          <Text style={styles.actionText}>My Library</Text>
-        </TouchableOpacity>
+          <TypedTouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Library')}
+          >
+            <TypedText style={styles.actionIcon}>📚</TypedText>
+            <TypedText style={styles.actionText}>My Library</TypedText>
+          </TypedTouchableOpacity>
 
+          <TypedTouchableOpacity
+            style={styles.actionButton}
+            onPress={handleAuthAction}
+          >
+            <TypedText style={styles.actionIcon}>{user ? '🚪' : '🔐'}</TypedText>
+            <TypedText style={styles.actionText}>{user ? 'Logout' : 'Login / Sign Up'}</TypedText>
+          </TypedTouchableOpacity>
+        </TypedView>
 
-
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={handleAuthAction}
-        >
-          <Text style={styles.actionIcon}>{user ? '🚪' : '🔐'}</Text>
-          <Text style={styles.actionText}>{user ? 'Logout' : 'Login / Sign Up'}</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>How It Works</Text>
-        <View style={styles.howItWorks}>
-          <View style={styles.step}>
-            <Text style={styles.stepNumber}>1</Text>
-            <Text style={styles.stepText}>Search for any song</Text>
-          </View>
-          <View style={styles.step}>
-            <Text style={styles.stepNumber}>2</Text>
-            <Text style={styles.stepText}>Get instant chord analysis</Text>
-          </View>
-          <View style={styles.step}>
-            <Text style={styles.stepNumber}>3</Text>
-            <Text style={styles.stepText}>Play along with chords</Text>
-          </View>
-        </View>
-      </View>
-    </ScrollView>
+        <TypedView style={styles.section}>
+          <TypedText style={styles.sectionTitle}>How It Works</TypedText>
+          <TypedView style={styles.howItWorks}>
+            <TypedView style={styles.step}>
+              <TypedText style={styles.stepNumber}>1</TypedText>
+              <TypedText style={styles.stepText}>Search for any song</TypedText>
+            </TypedView>
+            <TypedView style={styles.step}>
+              <TypedText style={styles.stepNumber}>2</TypedText>
+              <TypedText style={styles.stepText}>Get instant chord analysis</TypedText>
+            </TypedView>
+            <TypedView style={styles.step}>
+              <TypedText style={styles.stepNumber}>3</TypedText>
+              <TypedText style={styles.stepText}>Play along with chords</TypedText>
+            </TypedView>
+          </TypedView>
+        </TypedView>
+      </TypedScrollView>
+    </TypedSafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#1a1a1a',
+  },
   container: {
     flex: 1,
     backgroundColor: '#1a1a1a',
   },
+  contentContainer: {
+    paddingBottom: 20,
+  },
   header: {
     padding: 20,
-    paddingTop: 40,
+    paddingTop: 10,
   },
   welcomeText: {
     fontSize: 24,
@@ -112,24 +131,27 @@ const styles = StyleSheet.create({
   },
   quickActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     padding: 20,
     gap: 15,
   },
   actionButton: {
     flex: 1,
+    minWidth: 100,
     backgroundColor: '#333',
-    padding: 20,
+    padding: 15,
     borderRadius: 15,
     alignItems: 'center',
   },
   actionIcon: {
-    fontSize: 30,
-    marginBottom: 10,
+    fontSize: 24,
+    marginBottom: 8,
   },
   actionText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
+    textAlign: 'center',
   },
   section: {
     padding: 20,

@@ -2,7 +2,15 @@
   "name": "chordslegend",
   "version": "2.0.0",
   "description": "Professional AI-powered chord detection and analysis mobile application with Pi Network integration",
-  "keywords": ["music", "chords", "guitar", "learning", "ai", "pi-network", "react-native"],
+  "keywords": [
+    "music",
+    "chords",
+    "guitar",
+    "learning",
+    "ai",
+    "pi-network",
+    "react-native"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/ismailfadlalla/ChordsLegend.git"
@@ -19,6 +27,7 @@
     "deploy": "powershell -File .\\deploy.ps1"
   },
   "dependencies": {
+    "@expo/metro-config": "^0.7.1",
     "@expo/webpack-config": "^18.0.1",
     "@firebase/auth-compat": "^0.5.28",
     "@react-native-async-storage/async-storage": "^1.17.11",
@@ -34,7 +43,8 @@
     "expo-linear-gradient": "~12.1.2",
     "expo-splash-screen": "^0.18.2",
     "expo-status-bar": "~1.4.4",
-    "firebase": "^10.11.1",
+    "firebase": "^10.14.1",
+    "metro": "^0.73.10",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-native": "0.71.14",
@@ -44,12 +54,15 @@
     "react-native-vector-icons": "^10.2.0",
     "react-native-web": "^0.18.12",
     "react-native-webview": "11.26.0",
-    "react-native-youtube-iframe": "^2.4.1"
+    "react-native-youtube-iframe": "^2.4.1",
+    "@types/react": "~18.0.27"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
+    "@expo/cli": "^0.24.20",
     "@types/node": "^24.0.8",
-    "@types/react": "~18.0.24",
+    "@types/react": "~18.0.27",
+    "@types/react-native": "^0.71.8",
     "html-loader": "^5.1.0",
     "typescript": "^4.9.4"
   }

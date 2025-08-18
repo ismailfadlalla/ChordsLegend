@@ -12,12 +12,12 @@ const getFirebaseConfig = () => {
   // Try to get from Constants (app.config.js)
   const fromConstants = Constants.expoConfig?.extra;
   
-  // Create config object
-  const config = {
+  // Create and return config object with actual Firebase values from google-services.json
+  return {
     apiKey: fromConstants?.FIREBASE_API_KEY || 
             process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 
             process.env.FIREBASE_API_KEY || 
-            "your-firebase-api-key-here",
+            "AIzaSyALL-rz-I971ihPTi3XBxYWesjp4rxekww", // Real API key from google-services.json
             
     authDomain: fromConstants?.FIREBASE_AUTH_DOMAIN || 
                 process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 
@@ -27,25 +27,23 @@ const getFirebaseConfig = () => {
     projectId: fromConstants?.FIREBASE_PROJECT_ID || 
                process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 
                process.env.FIREBASE_PROJECT_ID || 
-               "chords-legend",
+               "chords-legend", // Real project ID from google-services.json
                
     storageBucket: fromConstants?.FIREBASE_STORAGE_BUCKET || 
                    process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 
                    process.env.FIREBASE_STORAGE_BUCKET || 
-                   "chords-legend.firebasestorage.app",
+                   "chords-legend.firebasestorage.app", // Real storage bucket from google-services.json
                    
     messagingSenderId: fromConstants?.FIREBASE_MESSAGING_SENDER_ID || 
                        process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || 
                        process.env.FIREBASE_MESSAGING_SENDER_ID || 
-                       "509802787175",
+                       "509802787175", // Real messaging sender ID from google-services.json
                        
     appId: fromConstants?.FIREBASE_APP_ID || 
            process.env.EXPO_PUBLIC_FIREBASE_APP_ID || 
            process.env.FIREBASE_APP_ID || 
-           "1:509802787175:android:983791faee41272ef5bfc2"
+           "1:509802787175:web:d0bf54cff762cbcff5bfc2" // Real web app ID from .env file
   };
-  
-  return config;
 };
 
 const firebaseConfig = getFirebaseConfig();

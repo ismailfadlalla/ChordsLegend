@@ -30,61 +30,112 @@ const GuitarRhythmSheet: React.FC<GuitarRhythmSheetProps> = ({
   theme,
   onSeekToTime,
 }) => {
-  // Convert chord progression to rhythm sheet with measures and beats
+  // Convert chord progression to rhythm sheet using actual chord timing
   const generateRhythmSheet = (): Beat[] => {
     const beats: Beat[] = [];
-    const beatsPerMeasure = 4;
-    const beatDuration = 1; // 1 second per beat (60 BPM)
     
-    if (chordProgression.length === 0) return beats;
-    
-    const totalDuration = Math.max(
-      ...chordProgression.map(c => c.startTime + c.duration)
-    );
-    
-    const totalBeats = Math.ceil(totalDuration / beatDuration);
-    
-    for (let beatIndex = 0; beatIndex < totalBeats; beatIndex++) {
-      const beatTime = beatIndex * beatDuration;
-      const measure = Math.floor(beatIndex / beatsPerMeasure) + 1;
-      const beatNumber = (beatIndex % beatsPerMeasure) + 1;
-      
-      // Find the chord that should be playing at this beat
-      const activeChord = chordProgression.find(c => 
-        beatTime >= c.startTime && beatTime < c.startTime + c.duration
-      );
-      
-      // Check if this is a chord change (first beat of a new chord)
-      const isChordChange = chordProgression.some(c => 
-        Math.abs(c.startTime - beatTime) < 0.5
-      );
-      
-      beats.push({
-        chord: activeChord?.chord || '',
-        isChordChange,
-        time: beatTime,
-        beatNumber,
-        measure,
-      });
+    if (chordProgression.length === 0) {
+      return beats;
     }
     
+    console.log('🎸 GuitarRhythmSheet: Generating rhythm sheet from', chordProgression.length, 'chords');
+    
+    // Create beats directly from chord timing, not fixed intervals
+    chordProgression.forEach((chordTiming, index) => {
+      const { chord, startTime, duration } = chordTiming;
+      
+      console.log(`🎸 Processing chord ${index + 1}: ${chord} at ${startTime.toFixed(1)}s for ${duration.toFixed(1)}s`);
+      
+      // Add a beat for the chord start (chord change)
+      beats.push({
+        chord,
+        isChordChange: true,
+        time: startTime,
+        beatNumber: 1, // Main beat for this chord
+        measure: index + 1, // Each chord gets its own "measure" for display
+      });
+      
+      // If chord duration is long (>3 seconds), add subdivision beats to show progression
+      if (duration > 3) {
+        const subdivisions = Math.floor(duration / 3); // Every 3 seconds
+        for (let i = 1; i < subdivisions; i++) {
+          const subdivisionTime = startTime + (i * 3);
+          if (subdivisionTime < startTime + duration) {
+            beats.push({
+              chord,
+              isChordChange: false,
+              time: subdivisionTime,
+              beatNumber: i + 1,
+              measure: index + 1,
+            });
+          }
+        }
+      }
+    });
+    
+    // Add silence periods between chords if there are gaps
+    for (let i = 0; i < chordProgression.length - 1; i++) {
+      const currentChord = chordProgression[i];
+      const nextChord = chordProgression[i + 1];
+      const currentEnd = currentChord.startTime + currentChord.duration;
+      const gap = nextChord.startTime - currentEnd;
+      
+      // If there's a gap > 2 seconds, add a silence beat
+      if (gap > 2) {
+        beats.push({
+          chord: '', // Empty chord for silence
+          isChordChange: true,
+          time: currentEnd,
+          beatNumber: 1,
+          measure: i + 0.5, // Between measures for sorting
+        });
+        console.log(`🎸 Added silence beat at ${currentEnd.toFixed(1)}s for ${gap.toFixed(1)}s gap`);
+      }
+    }
+    
+    // Sort beats by time
+    beats.sort((a, b) => a.time - b.time);
+    
+    console.log('🎸 Generated', beats.length, 'beats from chord progression');
     return beats;
   };
 
   const rhythmSheet = generateRhythmSheet();
-  const measuresPerRow = 4;
-  const totalMeasures = Math.max(...rhythmSheet.map(b => b.measure));
   
-  // Group beats by measures and rows
-  const getMeasureRows = () => {
-    const rows: Beat[][] = [];
+  // Group beats by chord segments instead of fixed measures
+  const getChordSegments = () => {
+    const segments: { [key: string]: Beat[] } = {};
+    rhythmSheet.forEach(beat => {
+      const segmentKey = `${beat.measure}-${beat.chord || 'silence'}`;
+      if (!segments[segmentKey]) {
+        segments[segmentKey] = [];
+      }
+      segments[segmentKey].push(beat);
+    });
+    return segments;
+  };
+
+  const segments = getChordSegments();
+  const segmentKeys = Object.keys(segments).sort((a, b) => {
+    const [measureA] = a.split('-').map(Number);
+    const [measureB] = b.split('-').map(Number);
+    return measureA - measureB;
+  });
+  
+  const totalSegments = segmentKeys.length;
+  const segmentsPerRow = 2; // Show 2 chord segments per row for better visibility
+
+  // Group chord segments by rows
+  const getSegmentRows = () => {
+    const rows: { segmentKey: string; beats: Beat[] }[][] = [];
     
-    for (let rowStart = 1; rowStart <= totalMeasures; rowStart += measuresPerRow) {
-      const rowBeats = rhythmSheet.filter(beat => 
-        beat.measure >= rowStart && beat.measure < rowStart + measuresPerRow
-      );
-      if (rowBeats.length > 0) {
-        rows.push(rowBeats);
+    for (let rowStart = 0; rowStart < segmentKeys.length; rowStart += segmentsPerRow) {
+      const rowSegments = segmentKeys.slice(rowStart, rowStart + segmentsPerRow).map(key => ({
+        segmentKey: key,
+        beats: segments[key]
+      }));
+      if (rowSegments.length > 0) {
+        rows.push(rowSegments);
       }
     }
     
@@ -92,27 +143,68 @@ const GuitarRhythmSheet: React.FC<GuitarRhythmSheetProps> = ({
   };
 
   const getCurrentBeat = () => {
-    return rhythmSheet.find(beat => 
-      Math.abs(beat.time - currentTime) < 0.5
+    // Find the currently active chord
+    const activeChord = chordProgression.find(c => 
+      currentTime >= c.startTime && currentTime < c.startTime + c.duration
     );
+    
+    if (activeChord) {
+      // Find the corresponding beat for this chord
+      return rhythmSheet.find(beat => 
+        beat.chord === activeChord.chord && beat.isChordChange
+      );
+    }
+    
+    // If no active chord, find closest beat by time
+    return rhythmSheet.reduce((closest, beat) => {
+      const currentDistance = Math.abs(beat.time - currentTime);
+      const closestDistance = Math.abs(closest.time - currentTime);
+      return currentDistance < closestDistance ? beat : closest;
+    }, rhythmSheet[0]);
   };
 
   const isActiveBeat = (beat: Beat) => {
-    return Math.abs(beat.time - currentTime) < 0.5;
+    // For chord change beats, check if we're in the chord's duration
+    if (beat.isChordChange && beat.chord) {
+      const chordTiming = chordProgression.find(c => 
+        c.chord === beat.chord && Math.abs(c.startTime - beat.time) < 0.5
+      );
+      if (chordTiming) {
+        return currentTime >= chordTiming.startTime && 
+               currentTime < chordTiming.startTime + chordTiming.duration;
+      }
+    }
+    
+    // For subdivision beats, check if close to current time
+    return Math.abs(beat.time - currentTime) < 1.5;
   };
 
   const isUpcomingBeat = (beat: Beat) => {
     return beat.time > currentTime && beat.time <= currentTime + 2;
   };
 
-  const renderMeasure = (measureBeats: Beat[], measureNumber: number) => {
-    const beats = measureBeats.filter(b => b.measure === measureNumber);
-    if (beats.length === 0) return null;
+  const renderChordSegment = (segmentData: { segmentKey: string; beats: Beat[] }) => {
+    const { segmentKey, beats } = segmentData;
+    const mainBeat = beats.find(b => b.isChordChange) || beats[0];
+    const chordTiming = chordProgression.find(c => c.chord === mainBeat.chord);
+    const isActiveSegment = chordTiming && 
+      currentTime >= chordTiming.startTime && 
+      currentTime < chordTiming.startTime + chordTiming.duration;
+
+    if (beats.length === 0) {
+      return null;
+    }
 
     return (
-      <View key={measureNumber} style={[styles.measure, { borderColor: theme.divider }]}>
+      <View key={segmentKey} style={[
+        styles.measure, 
+        { 
+          borderColor: theme.divider,
+          backgroundColor: isActiveSegment ? theme.primary + '10' : 'transparent',
+        }
+      ]}>
         <Text style={[styles.measureNumber, { color: theme.secondaryText }]}>
-          {measureNumber}
+          {chordTiming ? `${chordTiming.startTime.toFixed(1)}s` : 'Silence'}
         </Text>
         <View style={styles.beatsContainer}>
           {beats.map((beat, index) => (
@@ -131,7 +223,7 @@ const GuitarRhythmSheet: React.FC<GuitarRhythmSheetProps> = ({
               onPress={() => onSeekToTime(beat.time)}
             >
               {/* Chord symbol */}
-              {beat.isChordChange && beat.chord && (
+              {beat.isChordChange && (
                 <Text style={[
                   styles.chordSymbol,
                   {
@@ -139,7 +231,7 @@ const GuitarRhythmSheet: React.FC<GuitarRhythmSheetProps> = ({
                     fontWeight: isActiveBeat(beat) ? 'bold' : 'normal'
                   }
                 ]}>
-                  {beat.chord}
+                  {beat.chord || '∅'}
                 </Text>
               )}
               
@@ -156,16 +248,18 @@ const GuitarRhythmSheet: React.FC<GuitarRhythmSheetProps> = ({
                 }
               ]} />
               
-              {/* Beat number */}
-              <Text style={[
-                styles.beatNumber,
-                {
-                  color: isActiveBeat(beat) ? theme.primary : theme.secondaryText,
-                  fontWeight: beat.beatNumber === 1 ? 'bold' : 'normal'
-                }
-              ]}>
-                {beat.beatNumber}
-              </Text>
+              {/* Duration indicator for chord changes */}
+              {beat.isChordChange && chordTiming && (
+                <Text style={[
+                  styles.beatNumber,
+                  {
+                    color: isActiveBeat(beat) ? theme.primary : theme.secondaryText,
+                    fontWeight: 'bold'
+                  }
+                ]}>
+                  {chordTiming.duration.toFixed(1)}s
+                </Text>
+              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -173,26 +267,21 @@ const GuitarRhythmSheet: React.FC<GuitarRhythmSheetProps> = ({
     );
   };
 
-  const renderRow = (rowBeats: Beat[], rowIndex: number) => {
-    const measureNumbers = [...new Set(rowBeats.map(b => b.measure))].sort((a, b) => a - b);
-    
+  const renderRow = (rowSegments: { segmentKey: string; beats: Beat[] }[], rowIndex: number) => {
     return (
       <View key={rowIndex} style={styles.row}>
-        {measureNumbers.map(measureNumber => 
-          renderMeasure(rowBeats, measureNumber)
-        )}
+        {rowSegments.map(segmentData => renderChordSegment(segmentData))}
       </View>
     );
   };
-
   return (
     <View style={[styles.container, { backgroundColor: theme.surface }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.text }]}>
-          Guitar Rhythm Sheet
+          Guitar Rhythm Sheet • Real Timing
         </Text>
         <Text style={[styles.subtitle, { color: theme.secondaryText }]}>
-          ♩ = 60 BPM • {totalMeasures} measures • Tap any beat to seek
+          {totalSegments} chord segments • Tap any beat to seek
         </Text>
       </View>
       
@@ -200,22 +289,22 @@ const GuitarRhythmSheet: React.FC<GuitarRhythmSheetProps> = ({
         style={styles.sheetContainer}
         showsVerticalScrollIndicator={false}
       >
-        {getMeasureRows().map((rowBeats, index) => renderRow(rowBeats, index))}
+        {getSegmentRows().map((rowSegments, index) => renderRow(rowSegments, index))}
         
         {/* Legend */}
         <View style={[styles.legend, { borderTopColor: theme.divider }]}>
           <Text style={[styles.legendTitle, { color: theme.text }]}>Legend:</Text>
           <View style={styles.legendRow}>
             <View style={[styles.legendItem, { backgroundColor: theme.primary + '40' }]} />
-            <Text style={[styles.legendText, { color: theme.text }]}>Current Beat</Text>
+            <Text style={[styles.legendText, { color: theme.text }]}>Active Chord</Text>
           </View>
           <View style={styles.legendRow}>
             <View style={[styles.legendItem, { backgroundColor: theme.secondary + '20' }]} />
-            <Text style={[styles.legendText, { color: theme.text }]}>Upcoming Beat</Text>
+            <Text style={[styles.legendText, { color: theme.text }]}>Upcoming Chord</Text>
           </View>
           <View style={styles.legendRow}>
             <View style={[styles.beatIndicator, { backgroundColor: theme.text }]} />
-            <Text style={[styles.legendText, { color: theme.text }]}>Strong Beat (1)</Text>
+            <Text style={[styles.legendText, { color: theme.text }]}>Chord Start</Text>
           </View>
         </View>
       </ScrollView>

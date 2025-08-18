@@ -1,3 +1,7 @@
+"""
+ChordsLegend Simplified Flask API Server
+A simplified version of the main server for testing and development
+"""
 from flask import Flask, jsonify, request, send_from_directory
 import os
 import random
@@ -43,7 +47,7 @@ def test_chords():
 @app.route('/api/analyze-song', methods=['POST'])
 def analyze_song():
     try:
-        data = request.json if request.json else {}
+        data = request.json or {}
         url = data.get('url', '')
         
         # Mock response

@@ -1,66 +1,133 @@
-import json
+"""
+Mock chord analysis for testing purposes
+"""
+import random
+import re
 
-# Simple test for chord analysis functionality
-def mock_chord_analysis(youtube_url):
-    """Mock chord analysis that returns a realistic chord progression"""
-    
-    # Different chord progressions based on the video
-    chord_patterns = {
-        'default': [
-            {"chord": "C", "time": 0, "confidence": 0.9},
-            {"chord": "G", "time": 8, "confidence": 0.85},
-            {"chord": "Am", "time": 16, "confidence": 0.88},
-            {"chord": "F", "time": 24, "confidence": 0.92},
-            {"chord": "C", "time": 32, "confidence": 0.87},
-            {"chord": "G", "time": 40, "confidence": 0.91},
-            {"chord": "Am", "time": 48, "confidence": 0.86},
-            {"chord": "F", "time": 56, "confidence": 0.89},
-        ],
-        'hotel_california': [
-            {"chord": "Am", "time": 0, "confidence": 0.92},
-            {"chord": "E", "time": 8, "confidence": 0.88},
-            {"chord": "G", "time": 16, "confidence": 0.91},
-            {"chord": "D", "time": 24, "confidence": 0.89},
-            {"chord": "F", "time": 32, "confidence": 0.87},
-            {"chord": "C", "time": 40, "confidence": 0.93},
-            {"chord": "Dm", "time": 48, "confidence": 0.85},
-            {"chord": "E", "time": 56, "confidence": 0.90},
-        ],
-        'wonderwall': [
-            {"chord": "Em7", "time": 0, "confidence": 0.88},
-            {"chord": "G", "time": 8, "confidence": 0.92},
-            {"chord": "D", "time": 16, "confidence": 0.89},
-            {"chord": "C", "time": 24, "confidence": 0.91},
-            {"chord": "Em7", "time": 32, "confidence": 0.87},
-            {"chord": "G", "time": 40, "confidence": 0.90},
-            {"chord": "D", "time": 48, "confidence": 0.88},
-            {"chord": "C", "time": 56, "confidence": 0.93},
-        ]
+
+def mock_chord_analysis(url):
+    """
+    Generate mock chord analysis based on song characteristics
+    """
+    print(f"Mock chord analysis for URL: {url}")
+
+    # Song-specific chord progressions for popular songs
+    song_patterns = {
+        "beat it": {
+            "chords": ["Em", "Em", "Em", "Em", "C", "D", "Em", "Em",
+                       "Em", "Em", "Em", "Em", "C", "D", "Em", "Em",
+                       "G", "D", "Em", "Em", "G", "D", "Em", "Em",
+                       "C", "D", "Em", "Em", "C", "D", "Em", "Em",
+                       "Em", "Em", "Em", "Em", "C", "D", "Em", "Em",
+                       "G", "D", "Em", "Em", "G", "D", "Em", "Em"],
+            "duration": 258,
+            "key": "E minor",
+            "bpm": 138
+        },
+        "hotel california": {
+            "chords": ["Bm", "F#", "A", "E", "G", "D", "Em", "F#",
+                       "Bm", "F#", "A", "E", "G", "D", "Em", "F#"],
+            "duration": 391,
+            "key": "B minor",
+            "bpm": 74
+        },
+        "wonderwall": {
+            "chords": ["Em7", "G", "D", "C", "Em7", "G", "D", "C",
+                       "C", "D", "Em7", "Em7", "C", "D", "G", "G"],
+            "duration": 258,
+            "key": "G major",
+            "bpm": 87
+        },
+        "stairway to heaven": {
+            "chords": ["Am", "C", "D", "F", "Am", "C", "D", "F",
+                       "G", "Am", "Am", "Am", "C", "D", "F", "Am"],
+            "duration": 482,
+            "key": "A minor",
+            "bpm": 82
+        }
     }
-    
-    # Simple pattern matching
-    if 'hotel' in youtube_url.lower() or 'california' in youtube_url.lower():
-        return chord_patterns['hotel_california']
-    elif 'wonderwall' in youtube_url.lower() or 'oasis' in youtube_url.lower():
-        return chord_patterns['wonderwall']
+
+    # Extract song name from URL or title
+    song_key = None
+    url_lower = url.lower()
+
+    for song in song_patterns.keys():
+        if song.replace(" ", "") in url_lower.replace("-", "").replace("_", "").replace(" ", ""):
+            song_key = song
+            break
+
+    if song_key and song_key in song_patterns:
+        pattern = song_patterns[song_key]
+        chords = pattern["chords"]
+        duration = pattern["duration"]
+        key = pattern["key"]
+        bpm = pattern["bpm"]
     else:
-        return chord_patterns['default']
+        # Default chord progression
+        progressions = [
+            ["C", "G", "Am", "F"],
+            ["Am", "F", "C", "G"],
+            ["Em", "C", "G", "D"],
+            ["Dm", "G", "C", "Am"],
+            ["F", "C", "G", "Am"]
+        ]
+        base_progression = random.choice(progressions)
+        # Repeat and vary the progression
+        chords = []
+        for i in range(16):  # 16 chord changes
+            chords.extend(base_progression)
 
-def test_analysis():
-    """Test the chord analysis function"""
-    test_urls = [
-        "https://www.youtube.com/watch?v=gWju37TZfo0",  # Hotel California
-        "https://www.youtube.com/watch?v=bx1Bh8ZvH84",  # Wonderwall
-        "https://www.youtube.com/watch?v=random123",      # Default
+        duration = random.randint(180, 300)
+        keys = ["C major", "G major", "D major",
+                "A major", "E major", "F major"]
+        key = random.choice(keys)
+        bpm = random.randint(80, 140)
+
+    # Create timing for each chord
+    chord_duration = duration / len(chords)
+    chord_data = []
+
+    for i, chord in enumerate(chords):
+        start_time = i * chord_duration
+        end_time = (i + 1) * chord_duration
+
+        chord_data.append({
+            "chord": chord,
+            "start": round(start_time, 2),
+            "end": round(end_time, 2),
+            "confidence": round(random.uniform(0.8, 0.95), 2)
+        })
+
+    return chord_data
+
+
+def generate_realistic_progression(key="C", num_chords=16):
+    """
+    Generate a realistic chord progression based on music theory
+    """
+    progressions_by_key = {
+        "C": ["C", "F", "G", "Am", "Dm", "Em"],
+        "G": ["G", "C", "D", "Em", "Am", "Bm"],
+        "F": ["F", "Bb", "C", "Dm", "Gm", "Am"],
+        "D": ["D", "G", "A", "Bm", "Em", "F#m"],
+        "A": ["A", "D", "E", "F#m", "Bm", "C#m"],
+        "E": ["E", "A", "B", "C#m", "F#m", "G#m"]
+    }
+
+    available_chords = progressions_by_key.get(key, progressions_by_key["C"])
+
+    # Common progressions
+    common_patterns = [
+        [0, 3, 5, 1],  # I-vi-iii-IV
+        [0, 5, 3, 1],  # I-iii-vi-IV
+        [0, 1, 2, 0],  # I-IV-V-I
+        [3, 1, 0, 2],  # vi-IV-I-V
     ]
-    
-    for url in test_urls:
-        result = mock_chord_analysis(url)
-        print(f"\nURL: {url}")
-        print(f"Chords: {[chord['chord'] for chord in result]}")
-        print(f"First few timings: {[(c['chord'], c['time']) for c in result[:4]]}")
 
-if __name__ == "__main__":
-    print("🎸 Testing Chord Analysis Mock")
-    test_analysis()
-    print("\n✅ Mock analysis working correctly!")
+    progression = []
+    for _ in range(num_chords // 4):
+        pattern = random.choice(common_patterns)
+        for idx in pattern:
+            progression.append(available_chords[idx])
+
+    return progression[:num_chords]

@@ -10,7 +10,9 @@ export const PI_SANDBOX_CONFIG = {
   
   // Pi Browser Detection
   isPiBrowser: () => {
-    if (typeof window === 'undefined') return false;
+    if (typeof window === 'undefined') {
+      return false;
+    }
     return window.navigator.userAgent.includes('PiBrowser') || 
            window.location.hostname.includes('minepi.com') ||
            window.location.hostname.includes('sandbox.minepi.com');
@@ -64,7 +66,7 @@ export const initializePiBrowser = async () => {
   try {
     // Initialize Pi SDK for sandbox
     if (typeof window !== 'undefined' && (window as any).Pi) {
-      const Pi = (window as any).Pi;
+      const { Pi } = window as any;
       await Pi.init(PI_SANDBOX_CONFIG.SDK_CONFIG);
       console.log('Pi SDK initialized for sandbox');
       return true;
@@ -83,7 +85,7 @@ export const authenticateWithPi = async () => {
   }
 
   try {
-    const Pi = (window as any).Pi;
+    const { Pi } = window as any;
     const auth = await Pi.authenticate(PI_SANDBOX_CONFIG.APP_CONFIG.scopes, onIncompletePaymentFound);
     console.log('Pi authentication successful:', auth);
     return auth;

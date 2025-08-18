@@ -1,63 +1,34 @@
-const API_BASE = 'http://localhost:5000'; // Or your server IP
+// Use local backend for testing since your Flask server is running on port 5000
+const API_BASE = 'http://127.0.0.1:5000';
 
-interface ChordResponse {
-  chords: string[];
-  progression: string;
-  bpm: number;
-}
-
-interface StatusResponse {
-  message: string;
-  status: string;
-  endpoints: {
-    test_chords: string;
-  };
-}
-
-export const testChordsAPI = async (): Promise<ChordResponse> => {
-  try {
-    const response = await fetch(`${API_BASE}/api/test-chords`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Failed to fetch chords:', error);
-    throw error;
-  }
-};
-
-export const checkServerStatus = async (): Promise<StatusResponse> => {
-  const response = await fetch(API_BASE);
+export const apiCall = async (endpoint: string, method: string = 'GET', data?: any) => {
+  const url = `${API_BASE}${endpoint}`;
   
-  if (!response.ok) {
-    throw new Error('Server not responding');
-  }
-
-  return await response.json();
-};
-
-// Enhanced fetch with timeout
-export const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeout = 8000) => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-
+  console.log(`🌐 Local API Call: ${method} ${url}`);
+  console.log('📦 Request data:', data);
+  
   try {
     const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: data ? JSON.stringify(data) : undefined,
     });
-    clearTimeout(timeoutId);
-    
+
+    console.log('📡 Response status:', response.status);
+
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('❌ Response error:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
     }
-    
-    return await response.json();
+
+    const result = await response.json();
+    console.log('✅ Local API Response:', result);
+    return result;
   } catch (error) {
-    clearTimeout(timeoutId);
+    console.error('❌ Local API Error:', error);
     throw error;
   }
 };

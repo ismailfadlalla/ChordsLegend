@@ -1,8 +1,8 @@
 // src/components/ChordProgressionEditor.tsx
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    FlatList, Modal, ScrollView, StyleSheet,
-    Text, TouchableOpacity, View
+  FlatList, Modal, ScrollView, StyleSheet,
+  Text, TouchableOpacity, View
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { CHORD_LIBRARY } from '../utils/chordLibrary';
@@ -21,7 +21,7 @@ interface ChordProgressionEditorProps {
 }
 
 export const ChordProgressionEditor: React.FC<ChordProgressionEditorProps> = ({
-  initialProgression = ['C', 'G', '', '', '', ''],
+  initialProgression = ['C', 'G', 'Am', 'F'], // Changed to match common 4-chord progressions
   onProgressionChange,
   onChordSelect,
 }) => {
@@ -76,7 +76,9 @@ export const ChordProgressionEditor: React.FC<ChordProgressionEditorProps> = ({
     const chordSuffix = chord.replace(chordBase, ''); // Extract suffix
     
     let rootIndex = chromaticScale.indexOf(chordBase);
-    if (rootIndex === -1) return chord; // Return original if not found
+    if (rootIndex === -1) {
+      return chord; // Return original if not found
+    }
     
     rootIndex = (rootIndex + semitones + 12) % 12;
     return chromaticScale[rootIndex] + chordSuffix;
@@ -127,10 +129,34 @@ export const ChordProgressionEditor: React.FC<ChordProgressionEditorProps> = ({
 
   const getChordFingering = useCallback((chordName: string): ChordFingering | null => {
     const chordDef = CHORD_LIBRARY[chordName];
-    if (!chordDef || !chordDef.fingerings.length) return null;
+    if (!chordDef || !chordDef.fingerings.length) {
+      return null;
+    }
     
     // Return the first (usually simplest) fingering
     return chordDef.fingerings[0];
+  }, []);
+
+  // Add a new chord slot
+  const addChordSlot = useCallback(() => {
+    setProgression(currentProgression => {
+      const newSlot: ChordSlot = {
+        id: `slot-${Date.now()}`, // Use timestamp for unique IDs
+        chord: null,
+        position: currentProgression.length,
+      };
+      return [...currentProgression, newSlot];
+    });
+  }, []);
+
+  // Remove the last chord slot (minimum 2 slots)
+  const removeChordSlot = useCallback(() => {
+    setProgression(currentProgression => {
+      if (currentProgression.length <= 2) {
+        return currentProgression; // Minimum 2 chords
+      }
+      return currentProgression.slice(0, -1);
+    });
   }, []);
 
   const renderChordSlot = ({ item }: { item: ChordSlot }) => (
@@ -200,7 +226,7 @@ export const ChordProgressionEditor: React.FC<ChordProgressionEditorProps> = ({
   const chordFingering = getChordFingering(displayChord);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}> 
       {/* Header Controls */}
       <View style={styles.headerControls}>
         <View style={styles.controlGroup}>
@@ -255,6 +281,34 @@ export const ChordProgressionEditor: React.FC<ChordProgressionEditorProps> = ({
         />
       </View>
 
+      {/* Progression Controls */}
+      <View style={styles.progressionControls}>
+        <TouchableOpacity
+          style={[styles.progressionControlButton, { backgroundColor: theme.surface }]}
+          onPress={addChordSlot}
+        >
+          <Text style={[styles.progressionControlText, { color: theme.text }]}>+ Add Chord</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[
+            styles.progressionControlButton, 
+            { 
+              backgroundColor: progression.length <= 2 ? theme.divider : theme.surface,
+              opacity: progression.length <= 2 ? 0.5 : 1
+            }
+          ]}
+          onPress={removeChordSlot}
+          disabled={progression.length <= 2}
+        >
+          <Text style={[styles.progressionControlText, { color: theme.text }]}>- Remove Chord</Text>
+        </TouchableOpacity>
+        
+        <Text style={[styles.chordCountText, { color: theme.text }]}>
+          {progression.length} chords
+        </Text>
+      </View>
+
       {/* Chord Diagrams */}
       <View style={styles.diagramsContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -262,7 +316,9 @@ export const ChordProgressionEditor: React.FC<ChordProgressionEditorProps> = ({
             .filter(slot => slot.chord)
             .map(slot => {
               const fingering = getChordFingering(slot.chord!);
-              if (!fingering) return null;
+              if (!fingering) {
+                return null;
+              }
 
               return (
                 <View key={slot.id} style={styles.diagramWrapper}>
@@ -460,6 +516,29 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  progressionControls: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginVertical: 16,
+    paddingHorizontal: 20,
+  },
+  progressionControlButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  progressionControlText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  chordCountText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    opacity: 0.7,
   },
 });
 

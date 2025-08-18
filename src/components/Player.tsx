@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
-import { View, Text, StyleSheet, Animated, Easing } from "react-native";
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import { useTheme } from "../context/ThemeContext";
-import type { ChordData } from "../types";
+import type { ChordData } from "../types/models";
 
 interface PlayerProps {
   currentChord: ChordData;
@@ -43,7 +43,7 @@ export default function Player({
         useNativeDriver: true,
       }).start();
     });
-  }, [currentChord.chord]);
+  }, [currentChord.chord, scaleAnim, opacityAnim]);
 
   // Size configuration
   const sizeStyles = {
@@ -64,10 +64,14 @@ export default function Player({
     },
   };
 
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence > 0.8) return theme.success;
-    if (confidence > 0.6) return theme.warning;
-    return theme.error;
+  const getConfidenceColor = (confidence: number): string => {
+    if (confidence > 0.8) {
+      return (theme as any).success || "#4CAF50";
+    }
+    if (confidence > 0.6) {
+      return (theme as any).warning || "#FF9800";
+    }
+    return (theme as any).error || "#F44336";
   };
 
   return (
@@ -76,7 +80,7 @@ export default function Player({
         styles.container,
         { 
           backgroundColor: theme.primary || "#6A0DAD",
-          shadowColor: theme.shadow || "#000",
+          shadowColor: (theme as any).shadow || "#000",
           padding: sizeStyles[size].padding,
           opacity: opacityAnim,
           transform: [{ scale: scaleAnim }],

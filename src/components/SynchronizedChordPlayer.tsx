@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  FlatList, Modal, ScrollView, StyleSheet, Text,
-  TouchableOpacity, View
+    FlatList, Modal, ScrollView, StyleSheet, Text,
+    TouchableOpacity, View
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { CHORD_LIBRARY } from '../utils/chordLibrary';
+import { CHORD_LIBRARY, getChordFingerings } from '../utils/chordLibrary';
 import CompactRhythmTimeline from './CompactRhythmTimeline';
 import EmbeddedRhythmSheet from './EmbeddedRhythmSheet';
 import { ChordFingering, Fretboard } from './Fretboard.Enhanced';
@@ -21,171 +21,176 @@ interface SynchronizedChordPlayerProps {
   songTitle: string;
   chordProgression: ChordTiming[];
   onBack?: () => void;
+  onChordAdjust?: (index: number, newChord: string) => void;
+  analysisInfo?: {
+    method: string;
+    confidence: number;
+    key: string;
+    bpm: number;
+    timeSignature: string;
+  };
 }
 
 export const SynchronizedChordPlayer: React.FC<SynchronizedChordPlayerProps> = ({
   videoId,
   songTitle,
-  chordProgression,
+  chordProgression: originalChordProgression,
   onBack,
+  onChordAdjust,
+  analysisInfo,
 }) => {
+  console.log('🎸 SynchronizedChordPlayer rendered with:', {
+    videoId,
+    songTitle,
+    chordProgressionLength: originalChordProgression?.length || 0,
+    chordProgression: originalChordProgression,
+    analysisInfo
+  });
+  
+  // Use the original chord progression as-is
+  const chordProgression = originalChordProgression;
+  
+  // Calculate total duration
+  const totalDuration = chordProgression.reduce((total, chord) => {
+    return Math.max(total, chord.startTime + chord.duration);
+  }, 0);
+  
   const { theme } = useTheme();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [currentChordIndex, setCurrentChordIndex] = useState(0);
+  const [currentChordIndex, setCurrentChordIndex] = useState(-1); // Start with -1 to indicate no chord selected
   const [isLooping, setIsLooping] = useState(false);
   const [fingeringStyle, setFingeringStyle] = useState<'open' | 'barre' | 'movable'>('open');
   const [fingeringLocked, setFingeringLocked] = useState(false);
   const [showFingeringModal, setShowFingeringModal] = useState(false);
   const [fretboardSize, setFretboardSize] = useState<'small' | 'medium' | 'large'>('large');
-  const [forcePlayerState, setForcePlayerState] = useState<'play' | 'pause' | 'idle'>('idle');
   const [timingOffset, setTimingOffset] = useState(0); // Offset in seconds to align chords with song
 
   const playerRef = useRef<YouTubePlayerRef>(null);
 
-  // Get current chord based on YouTube player time with improved accuracy and silence detection
-  const getCurrentChord = useCallback(() => {
-    if (chordProgression.length === 0) return null;
+  // SIMPLIFIED CHORD DETECTION: Single source of truth for chord detection
+  const getChordAtTime = useCallback((time: number) => {
+    if (!chordProgression || chordProgression.length === 0) {
+      return { chordIndex: -1, chord: null };
+    }
     
-    // Apply timing offset
-    const adjustedTime = currentTime + timingOffset;
+    // Apply timing offset if needed (for manual synchronization adjustment)
+    const adjustedTime = time + timingOffset;
     
-    // Find chord that should be playing at current time
-    const activeChord = chordProgression.find((chord, index) => {
+    // Find the chord that should be active at this time
+    for (let i = 0; i < chordProgression.length; i++) {
+      const chord = chordProgression[i];
       const chordEndTime = chord.startTime + chord.duration;
-      const isInTimeRange = adjustedTime >= chord.startTime && adjustedTime < chordEndTime;
       
-      if (isInTimeRange) {
-        console.log(`🎸 Current chord at ${adjustedTime.toFixed(1)}s: ${chord.chord} (${chord.startTime}s - ${chordEndTime.toFixed(1)}s)`);
+      if (adjustedTime >= chord.startTime && adjustedTime < chordEndTime) {
+        return { chordIndex: i, chord: chord };
       }
-      
-      return isInTimeRange;
-    });
-    
-    // If no chord is found, we might be in a silence period
-    if (!activeChord) {
-      console.log(`🔇 No chord at ${adjustedTime.toFixed(1)}s - likely silence period`);
     }
     
-    return activeChord || null; // Return null instead of first chord when in silence
-  }, [currentTime, chordProgression, timingOffset]);
+    // No chord found - could be silence period or before/after progression
+    return { chordIndex: -1, chord: null };
+  }, [chordProgression, timingOffset]);
 
-  // Get next chord for preview
+  // Get current chord based on YouTube player time - SIMPLIFIED
+  const getCurrentChord = useCallback(() => {
+    const { chord } = getChordAtTime(currentTime);
+    return chord;
+  }, [currentTime, getChordAtTime]);
+
+  // Get next chord for preview - SIMPLIFIED
   const getNextChord = useCallback(() => {
-    if (chordProgression.length === 0) return null;
+    const { chordIndex } = getChordAtTime(currentTime);
     
-    // Apply timing offset
-    const adjustedTime = currentTime + timingOffset;
+    if (chordIndex >= 0 && chordIndex < chordProgression.length - 1) {
+      return chordProgression[chordIndex + 1];
+    }
     
-    const currentIndex = chordProgression.findIndex(chord => {
-      const chordEndTime = chord.startTime + chord.duration;
-      return adjustedTime >= chord.startTime && adjustedTime < chordEndTime;
-    });
-    
-    return currentIndex >= 0 && currentIndex < chordProgression.length - 1 
-      ? chordProgression[currentIndex + 1] 
-      : null;
-  }, [currentTime, chordProgression, timingOffset]);
+    return null;
+  }, [currentTime, getChordAtTime, chordProgression]);
 
-  // Update current chord index based on time with better tracking
+  // SIMPLIFIED CHORD TRACKING: Update chord index when time changes - FIXED SYNC
   useEffect(() => {
-    if (chordProgression.length === 0) return;
-    
-    // Apply timing offset to current time for chord matching
-    const adjustedTime = currentTime + timingOffset;
-    
-    // Find chord that should be playing at current time
-    const activeChordIndex = chordProgression.findIndex(chord => {
-      const chordEndTime = chord.startTime + chord.duration;
-      return adjustedTime >= chord.startTime && adjustedTime < chordEndTime;
-    });
-    
-    if (activeChordIndex !== -1 && activeChordIndex !== currentChordIndex) {
-      const activeChord = chordProgression[activeChordIndex];
-      console.log('🎵 Chord progression update:', {
-        time: currentTime.toFixed(1),
-        adjustedTime: adjustedTime.toFixed(1),
-        chord: activeChord.chord,
-        index: activeChordIndex + 1,
-        total: chordProgression.length,
-        chordStart: activeChord.startTime,
-        chordEnd: (activeChord.startTime + activeChord.duration).toFixed(1),
-        nextChord: chordProgression[activeChordIndex + 1]?.chord || 'End'
-      });
-      setCurrentChordIndex(activeChordIndex);
-    } else if (activeChordIndex === -1 && currentChordIndex !== -1) {
-      // We're in a silence period
-      console.log('🔇 Entering silence period at', adjustedTime.toFixed(1));
-      setCurrentChordIndex(-1);
+    if (chordProgression.length === 0) {
+      return;
     }
-  }, [currentTime, chordProgression, currentChordIndex, timingOffset]);
+    
+    const { chordIndex, chord } = getChordAtTime(currentTime);
+    
+    // Always update chord index for better synchronization
+    if (chordIndex !== currentChordIndex) {
+      if (chordIndex !== -1) {
+        // Found a valid chord at current time
+        setCurrentChordIndex(chordIndex);
+      } else if (currentChordIndex !== -1) {
+        // We were on a chord but now we're in silence - keep the last chord visible for a moment
+        // This prevents flickering during brief silence periods
+        const lastChord = chordProgression[currentChordIndex];
+        if (lastChord && currentTime > lastChord.startTime + lastChord.duration + 1) {
+          // Only clear if we're more than 1 second past the last chord
+          setCurrentChordIndex(-1);
+        }
+      }
+    }
+  }, [currentTime, chordProgression, currentChordIndex, getChordAtTime]);
 
-  // Handle YouTube player time updates - this syncs with actual video playback
-  const handlePlayerTimeUpdate = useCallback((time: number) => {
-    // Add debugging to see if time updates are being received
-    if (time % 2 < 0.5) { // Log every 2 seconds to avoid spam
-      console.log('🎵 SynchronizedChordPlayer received time update:', time.toFixed(1));
+  // Initialize first chord when chord progression is loaded
+  useEffect(() => {
+    if (chordProgression.length > 0 && currentChordIndex === -1) {
+      setCurrentChordIndex(0);
     }
-    setCurrentTime(time);
+  }, [chordProgression]);
+
+  // Handle YouTube player time updates - CRITICAL FIXES for stable highlighting and synchronization
+  // SIMPLIFIED TIME UPDATE: Clean and reliable time tracking
+  const handlePlayerTimeUpdate = useCallback((time: number) => {
+    // Ensure we always have a valid time value
+    const validTime = Math.max(0, time);
+    setCurrentTime(validTime);
+    
+    // Note: Chord index updates are handled by the useEffect above
+    // This separation keeps the code clean and predictable
   }, []);
 
-  // Handle YouTube player state changes
+  // Handle YouTube player state changes with IMMEDIATE chord forcing
+  // SIMPLIFIED PLAYER STATE CHANGE: Clean state synchronization
   const handlePlayerStateChange = useCallback((playing: boolean) => {
-    console.log('SynchronizedChordPlayer state change - playing:', playing);
-    
-    // If YouTube starts playing but our state says not playing, sync up
-    if (playing && !isPlaying) {
-      console.log('🎬 YouTube started playing - syncing chord player state');
-      setIsPlaying(true);
-    } else if (!playing && isPlaying) {
-      console.log('⏸️ YouTube paused - syncing chord player state');
-      setIsPlaying(false);
+    // Update our local state to match YouTube player state
+    if (playing !== isPlaying) {
+      setIsPlaying(playing);
+      
+      // Lock fingering when playing starts (for consistent display)
+      if (playing && !fingeringLocked) {
+        setFingeringLocked(true);
+      }
     }
     
-    if (playing && !fingeringLocked) {
-      setFingeringLocked(true);
-    }
-  }, [fingeringLocked, isPlaying]);
+    // Note: Chord selection is handled by the useEffect that watches currentTime
+    // This keeps the logic simple and predictable
+  }, [isPlaying, fingeringLocked]);
 
-  // Force player state changes when buttons are pressed
-  useEffect(() => {
-    if (forcePlayerState === 'play' && playerRef.current) {
-      console.log('🎵 Forcing player to play');
-      playerRef.current.play();
-      setForcePlayerState('idle');
-    } else if (forcePlayerState === 'pause' && playerRef.current) {
-      console.log('⏸️ Forcing player to pause');
+  const handleStartOver = () => {
+    // Reset player and time
+    if (playerRef.current) {
+      playerRef.current.seekTo(0);
       playerRef.current.pause();
-      setForcePlayerState('idle');
     }
-  }, [forcePlayerState]);
+    setCurrentTime(0);
+    setCurrentChordIndex(0);
+    setIsPlaying(false);
+  };
 
   // Get chord fingering based on style preference
   const getChordFingering = useCallback((chordName: string): ChordFingering | null => {
-    const chordDef = CHORD_LIBRARY[chordName];
+    // Use the improved chord lookup function
+    const chordDef = getChordFingerings(chordName);
     if (!chordDef || !chordDef.fingerings.length) {
-      console.warn('No chord definition found for:', chordName);
       return null;
     }
 
     // Find fingering based on preferred style
     const preferredFingering = chordDef.fingerings.find(f => f.type === fingeringStyle);
-    const result = preferredFingering || chordDef.fingerings[0];
-    console.log('Found fingering for', chordName, ':', result);
-    return result;
+    return preferredFingering || chordDef.fingerings[0];
   }, [fingeringStyle]);
-
-  const handleStartOver = () => {
-    console.log('🔄 Starting over - resetting to beginning');
-    // Reset player and time
-    if (playerRef.current) {
-      playerRef.current.seekTo(0);
-    }
-    setCurrentTime(0);
-    setCurrentChordIndex(0);
-    setIsPlaying(false);
-    setForcePlayerState('pause');
-  };
 
   const handleLoop = () => {
     setIsLooping(!isLooping);
@@ -252,10 +257,14 @@ export const SynchronizedChordPlayer: React.FC<SynchronizedChordPlayerProps> = (
 
   const renderFingeringModal = () => {
     const currentChord = getCurrentChord();
-    if (!currentChord) return null;
+    if (!currentChord) {
+      return null;
+    }
 
     const chordDef = CHORD_LIBRARY[currentChord.chord];
-    if (!chordDef) return null;
+    if (!chordDef) {
+      return null;
+    }
 
     return (
       <Modal
@@ -328,12 +337,13 @@ export const SynchronizedChordPlayer: React.FC<SynchronizedChordPlayerProps> = (
         <Text style={[styles.songTitle, { color: theme.text }]} numberOfLines={2}>
           {songTitle}
         </Text>
-        <Text style={{ color: theme.secondaryText, fontSize: 12, fontFamily: 'monospace' }}>
-          Debug: {currentTime.toFixed(1)}s | Chord {currentChordIndex + 1}/{chordProgression.length} | Playing: {isPlaying ? 'Yes' : 'No'} | Offset: {timingOffset > 0 ? '+' : ''}{timingOffset}s
-          {chordProgression[currentChordIndex] && (
-            <Text> | Current: {chordProgression[currentChordIndex].chord} ({chordProgression[currentChordIndex].startTime}s)</Text>
-          )}
-        </Text>
+        {analysisInfo && (
+          <View style={styles.analysisInfoContainer}>
+            <Text style={[styles.analysisInfoText, { color: theme.secondaryText }]}>
+              🎼 {analysisInfo.method} • {Math.round(analysisInfo.confidence * 100)}% • Key: {analysisInfo.key} • {analysisInfo.bpm} BPM
+            </Text>
+          </View>
+        )}
       </View>
 
       <ScrollView style={styles.content}>
@@ -347,123 +357,200 @@ export const SynchronizedChordPlayer: React.FC<SynchronizedChordPlayerProps> = (
             onTimeUpdate={handlePlayerTimeUpdate}
             onPlayingChange={handlePlayerStateChange}
             onChangeState={(state) => {
-              console.log('Player state changed:', state);
+              // Handle YouTube player state changes for synchronization
+              const isPlayerPlaying = state === 'playing';
+              handlePlayerStateChange(isPlayerPlaying);
             }}
           />
         </View>
 
-        {/* Controls */}
-        <View style={[styles.controls, { backgroundColor: theme.surface }]}>
+        {/* Controls - moved up with reduced spacing */}
+        <View style={[styles.controls, { backgroundColor: theme.surface, marginHorizontal: 16, marginVertical: 8, paddingVertical: 12 }]}>
           <TouchableOpacity
             style={[
               styles.controlButton, 
               { 
                 backgroundColor: isPlaying ? theme.secondary : theme.primary,
-                flex: 1 
+                flex: 1,
+                paddingVertical: 8, // Reduced from 12 to 8
+                marginHorizontal: 2 // Reduced spacing
               }
             ]}
             onPress={() => {
-              console.log('🎵 Play/Pause button pressed, current state:', isPlaying);
               if (isPlaying) {
-                // Pause playback
-                console.log('⏸️ Pausing playback');
+                // Pause both chord progression and YouTube
                 setIsPlaying(false);
-                setForcePlayerState('pause');
+                if (playerRef.current) {
+                  playerRef.current.pause();
+                }
               } else {
-                // Start playback and chord progression
-                console.log('▶️ Starting synchronized playback');
+                // Start both chord progression and YouTube - SIMPLIFIED
+                
+                // SIMPLIFIED START PLAYING: Use the same logic as highlighting
+                if (chordProgression.length > 0) {
+                  const { chordIndex, chord } = getChordAtTime(currentTime);
+                  
+                  if (chordIndex !== -1) {
+                    setCurrentChordIndex(chordIndex);
+                  } else {
+                    // No chord at current time - find the next upcoming chord
+                    let upcomingIndex = -1;
+                    for (let i = 0; i < chordProgression.length; i++) {
+                      if (currentTime < chordProgression[i].startTime) {
+                        upcomingIndex = i;
+                        break;
+                      }
+                    }
+                    
+                    if (upcomingIndex !== -1) {
+                      setCurrentChordIndex(upcomingIndex);
+                    } else {
+                      // Past all chords, start with first chord
+                      setCurrentChordIndex(0);
+                    }
+                  }
+                }
+                
+                // Set playing state and start YouTube player
                 setIsPlaying(true);
-                setForcePlayerState('play');
+                if (playerRef.current) {
+                  playerRef.current.play();
+                }
+                
+                // FORCE IMMEDIATE STATE UPDATE
+                setTimeout(() => {
+                  setIsPlaying(true);
+                  if (chordProgression.length > 0 && currentChordIndex < 0) {
+                    setCurrentChordIndex(0);
+                  }
+                }, 200);
               }
             }}
           >
-            <Text style={styles.controlButtonText}>
+            <Text style={[styles.controlButtonText, { fontSize: 11 }]}>
               {isPlaying ? '⏸️ Pause' : '▶️ Start Playing'} 
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.controlButton, { backgroundColor: theme.secondary }]}
+            style={[styles.controlButton, { backgroundColor: theme.secondary, paddingVertical: 8, marginHorizontal: 2 }]}
             onPress={handleStartOver}
           >
-            <Text style={styles.controlButtonText}>🔄 Start Over</Text>
+            <Text style={[styles.controlButtonText, { fontSize: 11 }]}>🔄 Start Over</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.controlButton,
-              { backgroundColor: isLooping ? theme.primary : theme.secondary }
+              { backgroundColor: isLooping ? theme.primary : theme.secondary, paddingVertical: 8, marginHorizontal: 2 }
             ]}
             onPress={handleLoop}
           >
-            <Text style={styles.controlButtonText}>🔁 Loop</Text>
+            <Text style={[styles.controlButtonText, { fontSize: 11 }]}>🔁 Loop</Text>
           </TouchableOpacity>
 
           {!fingeringLocked && (
             <TouchableOpacity
-              style={[styles.controlButton, { backgroundColor: theme.primary }]}
+              style={[styles.controlButton, { backgroundColor: theme.primary, paddingVertical: 8, marginHorizontal: 2 }]}
               onPress={() => setShowFingeringModal(true)}
             >
-              <Text style={styles.controlButtonText}>🎸 Style</Text>
+              <Text style={[styles.controlButtonText, { fontSize: 11 }]}>🎸 Style</Text>
             </TouchableOpacity>
           )}
 
           {/* Timing adjustment controls */}
           <TouchableOpacity
-            style={[styles.controlButton, { backgroundColor: theme.secondary }]}
+            style={[styles.controlButton, { backgroundColor: theme.secondary, paddingVertical: 8, marginHorizontal: 2 }]}
             onPress={() => setTimingOffset(offset => Math.max(-10, offset - 0.5))}
           >
-            <Text style={styles.controlButtonText}>⏪ -0.5s</Text>
+            <Text style={[styles.controlButtonText, { fontSize: 10 }]}>⏪ -0.5s</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.controlButton, { backgroundColor: theme.secondary }]}
+            style={[styles.controlButton, { backgroundColor: theme.secondary, paddingVertical: 8, marginHorizontal: 2 }]}
             onPress={() => setTimingOffset(offset => Math.min(10, offset + 0.5))}
           >
-            <Text style={styles.controlButtonText}>⏩ +0.5s</Text>
+            <Text style={[styles.controlButtonText, { fontSize: 10 }]}>⏩ +0.5s</Text>
           </TouchableOpacity>
 
           {timingOffset !== 0 && (
             <TouchableOpacity
-              style={[styles.controlButton, { backgroundColor: '#ff6b6b' }]}
+              style={[styles.controlButton, { backgroundColor: '#ff6b6b', paddingVertical: 8, marginHorizontal: 2 }]}
               onPress={() => setTimingOffset(0)}
             >
-              <Text style={styles.controlButtonText}>↩️ Reset</Text>
+              <Text style={[styles.controlButtonText, { fontSize: 10 }]}>↩️ Reset</Text>
             </TouchableOpacity>
           )}
         </View>
 
         {/* Unified View: Rhythm Timeline + Sheet + Fretboard */}
         
+        {/* Debug: Show chord progression info */}
+        <View style={{ backgroundColor: theme.surface, padding: 10, margin: 10 }}>
+          <Text style={{ color: theme.text, fontSize: 16, fontWeight: 'bold' }}>
+            🐛 Debug Info:
+          </Text>
+          <Text style={{ color: theme.text }}>
+            Chord Progression Length: {chordProgression?.length || 0}
+          </Text>
+          <Text style={{ color: theme.text }}>
+            Video ID: {videoId}
+          </Text>
+          <Text style={{ color: theme.text }}>
+            Current Time: {currentTime.toFixed(1)}s
+          </Text>
+          {chordProgression?.length > 0 && (
+            <Text style={{ color: theme.text }}>
+              First Chord: {chordProgression[0].chord} at {chordProgression[0].startTime}s
+            </Text>
+          )}
+        </View>
+        
         {/* Compact Rhythm Timeline */}
-        <CompactRhythmTimeline
-          chordProgression={chordProgression}
-          currentTime={currentTime + timingOffset}
-          isPlaying={isPlaying}
-          theme={theme}
-          onSeekToTime={(time) => {
-            if (playerRef.current) {
-              playerRef.current.seekTo(time - timingOffset); // Adjust for offset when seeking
-              setCurrentTime(time - timingOffset);
-            }
-          }}
-        />
+        {chordProgression?.length > 0 ? (
+          <CompactRhythmTimeline
+            chordProgression={chordProgression}
+            currentTime={currentTime + timingOffset}
+            isPlaying={isPlaying}
+            theme={theme}
+            onSeekToTime={(time) => {
+              if (playerRef.current) {
+                playerRef.current.seekTo(time - timingOffset); // Adjust for offset when seeking
+                setCurrentTime(time - timingOffset);
+              }
+            }}
+          />
+        ) : (
+          <View style={{ backgroundColor: theme.surface, padding: 20, margin: 10 }}>
+            <Text style={{ color: theme.text, textAlign: 'center' }}>
+              ⚠️ No chord progression data available
+            </Text>
+          </View>
+        )}
 
         {/* Embedded Rhythm Sheet */}
-        <EmbeddedRhythmSheet
-          chordProgression={chordProgression}
-          currentTime={currentTime + timingOffset}
-          isPlaying={isPlaying}
-          theme={theme}
-          onSeekToTime={(time) => {
-            if (playerRef.current) {
-              playerRef.current.seekTo(time - timingOffset); // Adjust for offset when seeking
-              setCurrentTime(time - timingOffset);
-            }
-          }}
-        />
+        {chordProgression?.length > 0 ? (
+          <EmbeddedRhythmSheet
+            chordProgression={chordProgression}
+            currentTime={currentTime + timingOffset}
+            isPlaying={isPlaying}
+            theme={theme}
+            onSeekToTime={(time) => {
+              if (playerRef.current) {
+                playerRef.current.seekTo(time - timingOffset); // Adjust for offset when seeking
+                setCurrentTime(time - timingOffset);
+              }
+            }}
+          />
+        ) : (
+          <View style={{ backgroundColor: theme.surface, padding: 20, margin: 10 }}>
+            <Text style={{ color: theme.text, textAlign: 'center' }}>
+              ⚠️ No rhythm sheet data available
+            </Text>
+          </View>
+        )}
 
-        {/* Current Chord Display with Next Chord Preview */}
+        {/* Current Chord Display with Next Chord Preview - IMPROVED LAYOUT */}
         {(() => {
           const currentChord = getCurrentChord();
           const nextChord = getNextChord();
@@ -473,16 +560,16 @@ export const SynchronizedChordPlayer: React.FC<SynchronizedChordPlayerProps> = (
           // Show silence indicator when no chord is playing
           if (!currentChord) {
             return (
-              <View style={[styles.chordDisplay, { backgroundColor: theme.surface }]}>
-                <Text style={[styles.currentChordLabel, { color: theme.secondaryText }]}>
+              <View style={[styles.chordDisplay, { backgroundColor: theme.surface, marginVertical: 8 }]}>
+                <Text style={[styles.currentChordLabel, { color: theme.secondaryText, fontSize: 18 }]}>
                   🔇 Silence Period
                 </Text>
-                <Text style={[styles.fingeringStyle, { color: theme.secondaryText }]}>
+                <Text style={[styles.fingeringStyle, { color: theme.secondaryText, fontSize: 12, marginBottom: 8 }]}>
                   No chords playing - this might be an instrumental break or quiet section
                 </Text>
                 {nextChord && (
                   <View style={styles.nextChordPreview}>
-                    <Text style={[styles.nextChordLabel, { color: theme.text }]}>
+                    <Text style={[styles.nextChordLabel, { color: theme.text, fontSize: 14 }]}>
                       Next chord: {nextChord.chord} at {nextChord.startTime}s
                     </Text>
                   </View>
@@ -492,14 +579,20 @@ export const SynchronizedChordPlayer: React.FC<SynchronizedChordPlayerProps> = (
           }
           
           return currentFingering ? (
-              <View style={[styles.chordDisplay, { backgroundColor: theme.surface }]}>
+              <View style={[styles.chordDisplay, { backgroundColor: theme.surface, marginVertical: 8, paddingVertical: 12 }]}>
                 <View style={styles.currentNextContainer}>
                   {/* Current Chord */}
                   <View style={styles.currentChordSection}>
-                    <Text style={[styles.currentChordLabel, { color: theme.text }]}>
+                    <Text style={[styles.currentChordLabel, { color: theme.text, fontSize: 20 }]}>
                       Now Playing
                     </Text>
-                    <Text style={[styles.chordName, { color: theme.primary }]}>
+                    {/* Key display below Now Playing */}
+                    {analysisInfo && (
+                      <Text style={[styles.keyDisplay, { color: theme.primary, fontSize: 14, marginBottom: 6 }]}>
+                        Key: {analysisInfo.key}
+                      </Text>
+                    )}
+                    <Text style={[styles.chordName, { color: theme.primary, fontSize: 28, marginBottom: 8 }]}>
                       {currentChord.chord}
                     </Text>
                     <View style={styles.fretboardContainer}>
@@ -517,13 +610,13 @@ export const SynchronizedChordPlayer: React.FC<SynchronizedChordPlayerProps> = (
                   {/* Next Chord Preview */}
                   {nextChord && nextFingering && (
                     <View style={styles.nextChordSection}>
-                      <Text style={[styles.nextChordLabel, { color: theme.secondaryText }]}>
+                      <Text style={[styles.nextChordLabel, { color: theme.secondaryText, fontSize: 11 }]}>
                         Next Up
                       </Text>
-                      <Text style={[styles.nextChordName, { color: theme.text }]}>
+                      <Text style={[styles.nextChordName, { color: theme.text, fontSize: 16 }]}>
                         {nextChord.chord}
                       </Text>
-                      <Text style={[styles.nextChordTime, { color: theme.secondaryText }]}>
+                      <Text style={[styles.nextChordTime, { color: theme.secondaryText, fontSize: 10 }]}>
                         in {Math.max(0, Math.floor(nextChord.startTime - currentTime))}s
                       </Text>
                       <View style={styles.nextFretboardContainer}>
@@ -540,13 +633,13 @@ export const SynchronizedChordPlayer: React.FC<SynchronizedChordPlayerProps> = (
                   )}
                 </View>
 
-                <Text style={[styles.fingeringStyle, { color: theme.secondaryText }]}>
+                <Text style={[styles.fingeringStyle, { color: theme.secondaryText, fontSize: 12, marginBottom: 12 }]}>
                   {fingeringStyle.charAt(0).toUpperCase() + fingeringStyle.slice(1)} Style
                   {fingeringLocked && ' (Locked)'}
                 </Text>
 
-                {/* Fretboard Size Controls */}
-                <View style={styles.sizeControls}>
+                {/* Fretboard Size Controls - moved up with reduced spacing */}
+                <View style={[styles.sizeControls, { marginBottom: 8 }]}>
                   {(['small', 'medium', 'large'] as const).map((size) => (
                     <TouchableOpacity
                       key={size}
@@ -554,11 +647,13 @@ export const SynchronizedChordPlayer: React.FC<SynchronizedChordPlayerProps> = (
                         styles.sizeButton,
                         {
                           backgroundColor: fretboardSize === size ? theme.primary : theme.secondary,
+                          paddingHorizontal: 10,
+                          paddingVertical: 4,
                         }
                       ]}
                       onPress={() => setFretboardSize(size)}
                     >
-                      <Text style={styles.sizeButtonText}>
+                      <Text style={[styles.sizeButtonText, { fontSize: 11 }]}>
                         {size.charAt(0).toUpperCase() + size.slice(1)}
                       </Text>
                     </TouchableOpacity>
@@ -600,6 +695,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  analysisInfoContainer: {
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  analysisInfoText: {
+    fontSize: 11,
+    fontWeight: '500',
   },
   content: {
     flex: 1,
@@ -659,6 +762,12 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 8,
+  },
+  keyDisplay: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
   },
   fingeringStyle: {
     fontSize: 14,

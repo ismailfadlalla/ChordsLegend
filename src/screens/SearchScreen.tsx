@@ -1,81 +1,68 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import {
-  Alert, FlatList, Image, StyleSheet, Text,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
-  TouchableOpacity, View
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { searchYouTube } from '../api/youtube';
-import { RootStackParamList } from '../navigation/types';
+import type { RootStackParamList } from '../navigation/types';
 
-type SearchScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'Search'
->;
+type SearchScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Search'>;
 
-interface SearchResult {
-  id: string;
-  title: string;
-  thumbnail: string;
-  channelTitle: string;
-}
+// Type assertion for React Native components to fix JSX errors
+const TypedView = View as React.ComponentType<any>;
+const TypedText = Text as React.ComponentType<any>;
+const TypedTextInput = TextInput as React.ComponentType<any>;
+const TypedTouchableOpacity = TouchableOpacity as React.ComponentType<any>;
+const TypedImage = Image as React.ComponentType<any>;
+const TypedScrollView = ScrollView as React.ComponentType<any>;
 
-export default function SearchScreen() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [favorites, setFavorites] = useState<string[]>([]);
+export const SearchScreen: React.FC = () => {
   const navigation = useNavigation<SearchScreenNavigationProp>();
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
-  // Load favorites on component mount
-  React.useEffect(() => {
-    loadFavorites();
-  }, []);
+  console.log('🔄 SearchScreen render - results:', results.length, 'items');
 
-  const loadFavorites = async () => {
-    try {
-      const savedFavorites = await AsyncStorage.getItem('favorites');
-      if (savedFavorites) {
-        const favoritesData = JSON.parse(savedFavorites);
-        setFavorites(favoritesData.map((fav: any) => fav.id));
+  const toggleFavorite = (videoId: string) => {
+    setFavorites(prev => {
+      const newFavorites = new Set(prev);
+      if (newFavorites.has(videoId)) {
+        newFavorites.delete(videoId);
+      } else {
+        newFavorites.add(videoId);
       }
-    } catch (error) {
-      console.error('Error loading favorites:', error);
-    }
+      return newFavorites;
+    });
   };
 
-  const toggleFavorite = async (item: SearchResult) => {
+  const handleSongSelect = (item: any) => {
+    console.log('🎵 Song selected:', item.title);
+    console.log('🎵 Navigation available:', !!navigation);
+    console.log('🎵 Attempting navigation to ChordPlayer...');
+    
+    // Simple navigation test
     try {
-      const savedFavorites = await AsyncStorage.getItem('favorites');
-      let favoritesData = savedFavorites ? JSON.parse(savedFavorites) : [];
-      
-      const isAlreadyFavorite = favoritesData.some((fav: any) => fav.id === item.id);
-      
-      if (isAlreadyFavorite) {
-        // Remove from favorites
-        favoritesData = favoritesData.filter((fav: any) => fav.id !== item.id);
-        setFavorites(favorites.filter(id => id !== item.id));
-        Alert.alert('Removed', 'Song removed from favorites');
-      } else {
-        // Add to favorites
-        const favoriteItem = {
-          id: item.id,
-          title: item.title,
-          thumbnail: item.thumbnail,
-          channelTitle: item.channelTitle,
-          dateAdded: new Date().toISOString(),
-        };
-        favoritesData.push(favoriteItem);
-        setFavorites([...favorites, item.id]);
-        Alert.alert('Added', 'Song added to favorites');
-      }
-      
-      await AsyncStorage.setItem('favorites', JSON.stringify(favoritesData));
+      navigation.navigate('ChordPlayer', {
+        youtubeUrl: `https://www.youtube.com/watch?v=${item.id}`,
+        songTitle: item.title,
+        thumbnail: item.thumbnail || 'https://img.youtube.com/vi/' + item.id + '/default.jpg',
+        channel: item.channelTitle || 'Unknown Channel',
+        chords: []
+      });
+      console.log('✅ Navigation called successfully');
     } catch (error) {
-      console.error('Error toggling favorite:', error);
-      Alert.alert('Error', 'Failed to update favorites');
+      console.error('❌ Navigation error:', error);
+      Alert.alert('Navigation Error', `Failed to navigate: ${error.message}`);
     }
   };
 
@@ -86,97 +73,166 @@ export default function SearchScreen() {
     }
 
     setLoading(true);
+    
     try {
+      console.log('🔍 Searching YouTube for:', query);
       const searchResults = await searchYouTube(query);
+      console.log('✅ Search completed:', searchResults.length, 'results');
       setResults(searchResults);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to search. Please try again.');
+      
+    } catch (error: any) {
+      console.error('❌ Search error:', error);
+      Alert.alert('Search Error', error.message || 'Failed to search YouTube');
+      setResults([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectSong = (item: SearchResult) => {
-    // Convert YouTube video ID to full URL format expected by ChordPlayerScreen
-    const youtubeUrl = `https://www.youtube.com/watch?v=${item.id}`;
-    
-    navigation.navigate('ChordPlayer', {
-      youtubeUrl,
-      songTitle: item.title,
-      thumbnail: item.thumbnail,
-      channel: item.channelTitle,
-      chords: [], // Empty chords array - will be analyzed by ChordPlayerScreen
-    });
-  };
-
-  const renderSearchResult = ({ item }: { item: SearchResult }) => {
-    const isFavorite = favorites.includes(item.id);
-    
-    return (
-      <TouchableOpacity
-        style={styles.resultItem}
-        onPress={() => handleSelectSong(item)}
-      >
-        <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
-        <View style={styles.resultInfo}>
-          <Text style={styles.resultTitle} numberOfLines={2}>
-            {item.title}
-          </Text>
-          <Text style={styles.resultChannel} numberOfLines={1}>
-            {item.channelTitle}
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={styles.favoriteButton}
-          onPress={() => toggleFavorite(item)}
-        >
-          <Text style={[styles.favoriteIcon, isFavorite && styles.favoriteIconActive]}>
-            {isFavorite ? '❤️' : '🤍'}
-          </Text>
-        </TouchableOpacity>
-      </TouchableOpacity>
-    );
-  };
-
   return (
-    <View style={styles.container}>
-      <View style={styles.searchContainer}>
-        <TextInput
+    <TypedView style={styles.container}>
+      {/* Search Header */}
+      <TypedView style={styles.searchContainer}>
+        <TypedTextInput
           style={styles.searchInput}
           placeholder="Search for songs..."
           placeholderTextColor="#888"
           value={query}
           onChangeText={setQuery}
+          returnKeyType="search"
           onSubmitEditing={handleSearch}
         />
-        <TouchableOpacity
-          style={[styles.searchButton, loading && styles.searchButtonDisabled]}
+        <TypedTouchableOpacity
+          style={styles.searchButton}
           onPress={handleSearch}
           disabled={loading}
         >
-          <Text style={styles.searchButtonText}>
+          <TypedText style={styles.searchButtonText}>
             {loading ? 'Searching...' : 'Search'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          </TypedText>
+        </TypedTouchableOpacity>
+      </TypedView>
 
-      <FlatList
-        data={results}
-        keyExtractor={(item) => item.id}
-        renderItem={renderSearchResult}
-        style={styles.resultsList}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              {loading ? 'Searching...' : 'Search for your favorite songs'}
-            </Text>
-          </View>
-        }
-      />
-    </View>
+      {/* Status Display */}
+      <TypedView style={styles.statusBar}>
+        <TypedText style={styles.statusText}>
+          {loading ? '🔍 Searching...' : 
+           results.length > 0 ? `🎵 Found ${results.length} results` : 
+           '🎶 Ready to search'}
+        </TypedText>
+        
+        {/* Debug Test Button */}
+        <TypedTouchableOpacity
+          style={styles.debugButton}
+          onPress={() => {
+            console.log('🧪 Testing navigation to ChordPlayer...');
+            navigation.navigate('ChordPlayer', {
+              youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+              songTitle: 'Test Song',
+              thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg',
+              channel: 'Test Channel',
+              chords: []
+            });
+          }}
+        >
+          <TypedText style={styles.debugButtonText}>🧪 Test Navigation</TypedText>
+        </TypedTouchableOpacity>
+        
+        {/* Quick Mock Test Button */}
+        <TypedTouchableOpacity
+          style={[styles.debugButton, { backgroundColor: '#4CAF50' }]}
+          onPress={() => {
+            console.log('🧪 Testing with mock progression...');
+            navigation.navigate('ChordPlayer', {
+              youtubeUrl: 'https://www.youtube.com/watch?v=oHg5SJYRHA0',
+              songTitle: 'Never Gonna Give You Up (Mock Test)',
+              thumbnail: 'https://img.youtube.com/vi/oHg5SJYRHA0/maxresdefault.jpg',
+              channel: 'Rick Astley',
+              chords: []
+            });
+          }}
+        >
+          <TypedText style={styles.debugButtonText}>🎵 Mock Test</TypedText>
+        </TypedTouchableOpacity>
+      </TypedView>
+
+      {/* Results */}
+      {results.length > 0 ? (
+        <TypedView style={{ flex: 1 }}>
+          <TypedText style={styles.resultsHeader}>
+            🎵 Found {results.length} results
+          </TypedText>
+          
+          {/* Results List - Using proven manual mapping */}
+          <TypedView style={styles.resultsList}>
+            {results.map((item, index) => (
+              <TypedTouchableOpacity 
+                key={`${item.id}-${index}`} 
+                style={styles.resultCard}
+                onPress={() => handleSongSelect(item)}
+                activeOpacity={0.8}
+              >
+                <TypedView style={styles.resultContent}>
+                  {/* Thumbnail with Play Overlay */}
+                  <TypedView style={styles.thumbnailContainer}>
+                    <TypedImage 
+                      source={{ uri: item.thumbnail }}
+                      style={styles.thumbnail}
+                      resizeMode="cover"
+                    />
+                    <TypedView style={styles.playOverlay}>
+                      <TypedText style={styles.playIcon}>▶️</TypedText>
+                    </TypedView>
+                  </TypedView>
+                  
+                  {/* Content */}
+                  <TypedView style={styles.resultInfo}>
+                    <TypedText style={styles.resultTitle} numberOfLines={2}>
+                      {item.title}
+                    </TypedText>
+                    <TypedText style={styles.resultChannel} numberOfLines={1}>
+                      {item.channelTitle}
+                    </TypedText>
+                    <TypedView style={styles.metaRow}>
+                      <TypedText style={styles.resultMeta}>
+                        {item.publishedAt ? new Date(item.publishedAt).getFullYear() : 'Video'}
+                      </TypedText>
+                      <TypedText style={styles.resultMeta}>•</TypedText>
+                      <TypedText style={styles.resultMeta}>YouTube</TypedText>
+                    </TypedView>
+                  </TypedView>
+                  
+                  {/* Favorite Button */}
+                  <TypedTouchableOpacity 
+                    style={styles.favoriteButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(item.id);
+                    }}
+                  >
+                    <TypedText style={[styles.favoriteIcon, { 
+                      color: favorites.has(item.id) ? '#FF6B6B' : '#666' 
+                    }]}>
+                      {favorites.has(item.id) ? '❤️' : '🤍'}
+                    </TypedText>
+                  </TypedTouchableOpacity>
+                </TypedView>
+              </TypedTouchableOpacity>
+            ))}
+          </TypedView>
+        </TypedView>
+      ) : (
+        <TypedView style={styles.emptyContainer}>
+          {loading ? (
+            <TypedText style={styles.loadingText}>🔍 Searching...</TypedText>
+          ) : (
+            <TypedText style={styles.emptyText}>🎵 Enter a search term above</TypedText>
+          )}
+        </TypedView>
+      )}
+    </TypedView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -187,78 +243,154 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     gap: 12,
+    backgroundColor: '#2a2a2a',
+    alignItems: 'center',
   },
   searchInput: {
     flex: 1,
-    backgroundColor: '#333',
+    backgroundColor: '#3a3a3a',
     color: '#fff',
-    padding: 12,
+    padding: 14,
     borderRadius: 8,
     fontSize: 16,
   },
   searchButton: {
     backgroundColor: '#007AFF',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: 8,
     justifyContent: 'center',
-  },
-  searchButtonDisabled: {
-    backgroundColor: '#555',
   },
   searchButtonText: {
     color: '#fff',
     fontWeight: 'bold',
   },
-  resultsList: {
-    flex: 1,
-  },
-  resultItem: {
-    flexDirection: 'row',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+  statusBar: {
+    backgroundColor: '#2a2a2a',
+    padding: 12,
     alignItems: 'center',
   },
-  thumbnail: {
-    width: 80,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  resultInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  resultTitle: {
+  statusText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',
-    marginBottom: 4,
   },
-  resultChannel: {
-    color: '#888',
-    fontSize: 14,
+  resultsHeader: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    padding: 16,
+    backgroundColor: '#2a2a2a',
+    textAlign: 'center',
+  },
+  resultsList: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 100,
   },
-  emptyText: {
+  resultCard: {
+    backgroundColor: '#2a2a2a',
+    marginVertical: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderLeftWidth: 3,
+    borderLeftColor: '#4CAF50',
+  },
+  resultContent: {
+    flexDirection: 'row',
+    padding: 12,
+    alignItems: 'flex-start',
+  },
+  thumbnail: {
+    width: 120,
+    height: 68,
+    borderRadius: 8,
+    backgroundColor: '#3a3a3a',
+  },
+  thumbnailContainer: {
+    position: 'relative',
+  },
+  playOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 8,
+  },
+  playIcon: {
+    fontSize: 24,
+    color: '#fff',
+  },
+  resultInfo: {
+    flex: 1,
+    marginLeft: 12,
+    marginRight: 8,
+  },
+  resultTitle: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  resultChannel: {
+    color: '#aaa',
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  resultMeta: {
     color: '#888',
-    fontSize: 16,
-    textAlign: 'center',
+    fontSize: 12,
   },
   favoriteButton: {
     padding: 8,
-    marginLeft: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   favoriteIcon: {
-    fontSize: 24,
+    fontSize: 20,
   },
-  favoriteIconActive: {
-    fontSize: 24,
+  loadingText: {
+    color: '#fff',
+    fontSize: 18,
+  },
+  emptyText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  debugButton: {
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginTop: 8,
+  },
+  debugButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
+
+export default SearchScreen;

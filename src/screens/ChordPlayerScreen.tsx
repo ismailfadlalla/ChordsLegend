@@ -1,19 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { analyzeChords, ChordData } from '../api/chords';
-import { SynchronizedChordPlayer } from '../components/SynchronizedChordPlayer';
-
-interface ChordTiming {
-  chord: string;
-  startTime: number;
-  duration: number;
-}
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { analyzeChords } from '../api/chords';
+import SimpleSynchronizedChordPlayer from '../components/SimpleSynchronizedChordPlayer';
+import { getRealAnalysisData, REAL_ANALYSIS_DATA } from '../data/realAnalysisData';
+import { SongAnalysis } from '../services/professionalChordAnalysis';
 
 const ChordPlayerScreen = ({ route, navigation }: any) => {
   const { youtubeUrl, songTitle, thumbnail, channel } = route.params;
-  const [chordProgression, setChordProgression] = useState<ChordTiming[]>([]);
+  const [songAnalysis, setSongAnalysis] = useState<SongAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  console.log('🎸 ChordPlayerScreen mounted with params:', {
+    youtubeUrl,
+    songTitle,
+    thumbnail,
+    channel
+  });
   
   // Extract video ID from YouTube URL
   const getVideoId = (url: string) => {
@@ -21,267 +24,272 @@ const ChordPlayerScreen = ({ route, navigation }: any) => {
     return match ? match[1] : '';
   };
 
-  // Convert ChordData to ChordTiming format
-  const convertToChordTiming = (chordData: ChordData[]): ChordTiming[] => {
-    return chordData.map((chord, index) => {
-      const nextChord = chordData[index + 1];
-      const duration = nextChord ? nextChord.time - chord.time : 4; // Default 4 seconds for last chord
-      
-      return {
-        chord: chord.chord,
-        startTime: chord.time,
-        duration: Math.max(0.5, duration), // Minimum 0.5 seconds
-      };
-    });
-  };
-
-  // Generate realistic chord progression based on song analysis with silence detection
-  const generateRealisticProgression = (songTitle: string, duration: number = 240): ChordTiming[] => {
-    console.log('🎵 Generating chord progression for:', songTitle);
+  // Real-time audio analysis - NO MOCK DATA
+  const performRealAudioAnalysis = async (videoId: string, title: string) => {
+    console.log('🎵 Performing REAL audio analysis for:', title);
+    console.log('🎵 Video ID:', videoId);
+    console.log('🎵 Full URL:', `https://www.youtube.com/watch?v=${videoId}`);
     
-    // Song structures with verses, chorus, bridge patterns and silence periods
-    const songStructures = {
-      hotel_california: {
-        intro: ['Am', 'E', 'G', 'D', 'F', 'C', 'Dm', 'E'],
-        verse: ['Am', 'E', 'G', 'D', 'F', 'C', 'Dm', 'E'],
-        chorus: ['F', 'C', 'E', 'Am', 'F', 'C', 'Dm', 'E'],
-        bridge: ['Am', 'E', 'G', 'D', 'F', 'C', 'Dm', 'E'],
-        outro: ['Am', 'E', 'G', 'D', 'F', 'C', 'Dm', 'E', 'Am'],
-        silencePeriods: [
-          { start: 0, end: 8 },      // Quiet intro
-          { start: 120, end: 125 },  // Brief pause mid-song
-          { start: 200, end: 210 }   // Outro fade
-        ]
-      },
-      wonderwall: {
-        intro: ['Em7', 'G', 'D', 'C'],
-        verse: ['Em7', 'G', 'D', 'C', 'Em7', 'G', 'D', 'C'],
-        chorus: ['C', 'D', 'G', 'Em7', 'C', 'D', 'G', 'G'],
-        bridge: ['C', 'D', 'G', 'Em7', 'C', 'D', 'Em7', 'Em7'],
-        outro: ['Em7', 'G', 'D', 'C', 'Em7'],
-        silencePeriods: [
-          { start: 0, end: 4 },      // Short intro
-          { start: 180, end: 190 }   // Outro fade
-        ]
-      },
-      default: {
-        intro: ['C', 'G', 'Am', 'F'],
-        verse: ['C', 'G', 'Am', 'F', 'C', 'G', 'F', 'C'],
-        chorus: ['F', 'C', 'G', 'Am', 'F', 'C', 'G', 'G'],
-        bridge: ['Am', 'F', 'C', 'G', 'Am', 'F', 'G', 'G'],
-        outro: ['C', 'G', 'Am', 'F', 'C'],
-        silencePeriods: [
-          { start: 0, end: 2 },      // Brief intro
-          { start: 160, end: 170 }   // Outro fade
-        ]
-      }
-    };
-
-    // Detect song structure
-    const title = songTitle.toLowerCase();
-    let structure = songStructures.default;
-    
-    if (title.includes('hotel') || title.includes('california')) {
-      structure = songStructures.hotel_california;
-      console.log('🎸 Using Hotel California structure');
-    } else if (title.includes('wonderwall')) {
-      structure = songStructures.wonderwall;
-      console.log('🎸 Using Wonderwall structure');
-    } else {
-      console.log('🎸 Using default structure');
-    }
-
-    // Create full song progression with typical song structure
-    const fullProgression: string[] = [];
-    
-    // Intro (8-16 seconds)
-    fullProgression.push(...structure.intro);
-    console.log('After intro:', fullProgression.length, 'chords');
-    
-    // Verse 1 (16-32 seconds)  
-    fullProgression.push(...structure.verse);
-    console.log('After verse 1:', fullProgression.length, 'chords');
-    
-    // Chorus 1 (16-24 seconds)
-    fullProgression.push(...structure.chorus);
-    console.log('After chorus 1:', fullProgression.length, 'chords');
-    
-    // Verse 2 (16-32 seconds)
-    fullProgression.push(...structure.verse);
-    console.log('After verse 2:', fullProgression.length, 'chords');
-    
-    // Chorus 2 (16-24 seconds)
-    fullProgression.push(...structure.chorus);
-    console.log('After chorus 2:', fullProgression.length, 'chords');
-    
-    // Bridge/Solo (16-32 seconds)
-    fullProgression.push(...structure.bridge);
-    console.log('After bridge:', fullProgression.length, 'chords');
-    
-    // Final Chorus (16-24 seconds)
-    fullProgression.push(...structure.chorus);
-    console.log('After final chorus:', fullProgression.length, 'chords');
-    
-    // Outro (8-16 seconds)
-    fullProgression.push(...structure.outro);
-    console.log('Final progression length:', fullProgression.length, 'chords');
-
-    // Convert to timed progression with silence detection
-    const chords: ChordTiming[] = [];
-    let currentTime = 0;
-    
-    // Helper function to check if a time is in a silence period
-    const isInSilencePeriod = (time: number): boolean => {
-      if (!structure.silencePeriods) return false;
-      return structure.silencePeriods.some(period => 
-        time >= period.start && time < period.end
+    try {
+      // Call real API for chord detection - note: analyzeChords returns ChordData[] directly
+      console.log('🌐 About to call analyzeChords...');
+      const chordDataArray = await analyzeChords(
+        `https://www.youtube.com/watch?v=${videoId}`
       );
-    };
-    
-    fullProgression.forEach((chord, index) => {
-      // Skip adding chord if we're in a silence period
-      if (isInSilencePeriod(currentTime)) {
-        console.log(`🔇 Skipping chord ${chord} at ${currentTime}s - in silence period`);
-        currentTime += 2; // Short gap during silence
-        return;
+      
+      console.log('📊 Raw API response:', chordDataArray);
+      console.log('📊 Response type:', typeof chordDataArray);
+      console.log('📊 Is array:', Array.isArray(chordDataArray));
+      console.log('📊 Array length:', chordDataArray?.length);
+      
+      if (!chordDataArray || chordDataArray.length === 0) {
+        console.error('❌ No chords returned from API');
+        throw new Error('Real audio analysis returned no chords');
       }
       
-      // More realistic chord duration based on song section and musical timing
-      let chordDuration = 4; // Base duration (one measure in 4/4 time)
+      console.log('🎸 First chord data:', chordDataArray[0]);
       
-      // Intro chords often last longer for atmosphere
-      if (index < structure.intro.length) {
-        chordDuration = Math.random() > 0.5 ? 8 : 6; // 2 measures or 1.5 measures
-      }
-      // Outro chords fade out slowly
-      else if (index >= fullProgression.length - structure.outro.length) {
-        chordDuration = Math.random() > 0.3 ? 8 : 6;
-      }
-      // Verse chords are steady
-      else if (index < structure.intro.length + structure.verse.length * 2) {
-        chordDuration = Math.random() > 0.8 ? 2 : 4; // Occasional quick changes
-      }
-      // Chorus chords can be varied for energy
-      else {
-        const rand = Math.random();
-        if (rand > 0.9) chordDuration = 2;      // Quick change (half measure)
-        else if (rand > 0.7) chordDuration = 8; // Long chord (two measures)
-        else chordDuration = 4;                 // Standard (one measure)
-      }
-      
-      chords.push({
-        chord,
-        startTime: currentTime,
-        duration: chordDuration,
+      // Convert ChordData[] to chord progression format with correct interface
+      const chordProgression = chordDataArray.map((chordData, index) => {
+        console.log(`🎵 Processing chord ${index}:`, chordData);
+        return {
+          chord: chordData.chord || 'C',
+          startTime: chordData.time || (index * 4),
+          duration: chordData.duration || 4,
+          confidence: chordData.confidence || 0.8,
+          source: 'detected' as const // Use correct type from ChordTiming interface
+        };
       });
       
-      currentTime += chordDuration;
-    });
-    
-    // Filter out any chords that would be entirely in silence periods
-    const filteredChords = chords.filter(chord => {
-      const chordEnd = chord.startTime + chord.duration;
-      // Keep chord if any part of it is NOT in a silence period
-      for (let t = chord.startTime; t < chordEnd; t += 0.5) {
-        if (!isInSilencePeriod(t)) {
-          return true;
-        }
-      }
-      return false;
-    });
-    
-    console.log('Generated chord progression:', filteredChords.length, 'chords, total duration:', currentTime, 'seconds');
-    console.log('Silence periods:', structure.silencePeriods || 'None');
-    console.log('Filtered out', chords.length - filteredChords.length, 'chords in silence periods');
-    console.log('Structure used:', {
-      intro: structure.intro.length,
-      verse: structure.verse.length,
-      chorus: structure.chorus.length,
-      bridge: structure.bridge.length,
-      outro: structure.outro.length
-    });
-    console.log('First 10 chords:', filteredChords.slice(0, 10));
-    console.log('Last 10 chords:', filteredChords.slice(-10));
-    
-    return filteredChords;
+      console.log(`✅ Real analysis completed: ${chordProgression.length} chords detected`);
+      console.log('🎸 Processed chord progression:', chordProgression.slice(0, 3));
+      
+      return {
+        songTitle: title,
+        videoId,
+        chordProgression,
+        key: 'C Major', // Default, could be extracted from analysis
+        timeSignature: '4/4',
+        bpm: 120,
+        analysisMethod: 'Real-Time Audio Analysis',
+        confidence: 0.8
+      };
+      
+    } catch (error) {
+      console.error('❌ Real audio analysis failed with error:', error);
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack',
+        type: typeof error,
+        name: error instanceof Error ? error.name : 'Unknown'
+      });
+      throw error;
+    }
   };
 
-  // Analyze chords when component mounts
+  // Initialize professional chord analysis
   useEffect(() => {
-    const analyzeVideo = async () => {
+    const performChordAnalysis = async () => {
+      console.log('🎵 Starting chord analysis...');
+      setIsAnalyzing(true);
+      setError(null);
+
       try {
-        setIsAnalyzing(true);
-        setError(null);
+        const videoId = getVideoId(youtubeUrl);
+        console.log('🎵 Extracted video ID:', videoId);
         
-        // Try to get real chord analysis
-        const chordData = await analyzeChords(youtubeUrl);
-        
-        if (chordData.length < 10) { // Minimum threshold for realistic song
-          console.log('🎵 API returned insufficient chords:', chordData.length, '- using fallback');
-          // Generate realistic progression based on song title
-          const realisticProgression = generateRealisticProgression(songTitle, 180);
-          console.log('Generated realistic progression:', realisticProgression);
-          setChordProgression(realisticProgression);
-        } else {
-          console.log('🎵 Using API chord data:', chordData.length, 'chords');
-          const chordTiming = convertToChordTiming(chordData);
-          console.log('Converted chord timing:', chordTiming);
-          setChordProgression(chordTiming);
+        if (!videoId) {
+          throw new Error('Could not extract video ID from YouTube URL');
         }
-      } catch (error) {
-        console.error('Chord analysis failed:', error);
-        setError(error instanceof Error ? error.message : 'Analysis failed');
+
+        // Try ONLY real chord analysis - NO FALLBACK
+        console.log('🎵 Attempting REAL-TIME chord analysis...');
+        const analysis = await performRealAudioAnalysis(videoId, songTitle);
         
-        // Generate realistic fallback based on song title
-        const realisticProgression = generateRealisticProgression(songTitle, 180);
-        console.log('Fallback realistic progression:', realisticProgression);
-        setChordProgression(realisticProgression);
-      } finally {
+        console.log('✅ Real-time chord analysis completed:', analysis);
+        console.log('🎵 Found', analysis.chordProgression.length, 'synchronized chords');
+        
+        setSongAnalysis(analysis);
+        setIsAnalyzing(false);
+        
+      } catch (error: any) {
+        console.error('❌ Real-time chord analysis failed:', error);
+        console.error('❌ Detailed error info:', {
+          message: error?.message || 'No message',
+          stack: error?.stack || 'No stack',
+          type: typeof error,
+          name: error?.name || 'Unknown',
+          cause: error?.cause || 'No cause'
+        });
+        
+        // 🔄 FALLBACK: Try real analysis data if API is blocked by CSP
+        console.log('🔄 API blocked by CSP, trying real analysis data fallback...');
+        const videoId = getVideoId(youtubeUrl);
+        console.log('🔍 Looking for embedded data for video ID:', videoId);
+        const realData = getRealAnalysisData(youtubeUrl);
+        console.log('🔍 Embedded data result:', realData ? 'Found' : 'Not found');
+        
+        if (realData && realData.chords) {
+          console.log('✅ Found real analysis data for video:', videoId);
+          console.log('🎵 Using embedded real analysis with', realData.chords.length, 'chords');
+          
+          // Convert to our format
+          const chordProgression = realData.chords.map((chord: any, index: number) => ({
+            chord: chord.chord || 'C',
+            startTime: chord.startTime || (index * 4),
+            duration: chord.duration || 4,
+            confidence: chord.confidence || 0.8,
+            source: 'real_embedded' as const
+          }));
+          
+          const analysis = {
+            songTitle,
+            videoId,
+            chordProgression,
+            key: realData.key || 'C Major',
+            timeSignature: '4/4',
+            bpm: realData.bpm || 120,
+            analysisMethod: 'Real Audio Analysis (Embedded)',
+            confidence: 0.8
+          };
+          
+          console.log('✅ Successfully created analysis from real data');
+          setSongAnalysis(analysis);
+          setIsAnalyzing(false);
+          return;
+        }
+        
+        // Show detailed error - NO FALLBACK TO FAKE DATA
+        console.log('❌ No embedded real analysis data available for video ID:', videoId);
+        console.log('📊 Available embedded video IDs:', Object.keys(REAL_ANALYSIS_DATA || {}));
+        const errorMessage = error?.message || 'Unknown error occurred during chord analysis';
+        setError(`Real chord analysis failed: ${errorMessage}. Note: This video is not yet in our real analysis database. Try "Beat It" by Michael Jackson for a demo of real chord analysis.`);
         setIsAnalyzing(false);
       }
     };
 
-    analyzeVideo();
-  }, [youtubeUrl]);
+    performChordAnalysis();
+  }, [youtubeUrl, songTitle]);
 
-  const videoId = getVideoId(youtubeUrl);
+  // Manual chord adjustment handler
+  const handleChordAdjustment = (index: number, newChord: string) => {
+    if (!songAnalysis) {
+      return;
+    }
+
+    console.log(`🎸 Adjusting chord at index ${index} to ${newChord}`);
+    const updatedProgression = [...songAnalysis.chordProgression];
+    updatedProgression[index] = {
+      ...updatedProgression[index],
+      chord: newChord
+    };
+
+    setSongAnalysis({
+      ...songAnalysis,
+      chordProgression: updatedProgression
+    });
+  };
+
+  // Re-analyze function - REAL ANALYSIS ONLY
+  const handleReAnalyze = async () => {
+    console.log('🔄 Re-analyzing chords with REAL audio analysis...');
+    setIsAnalyzing(true);
+    setError(null);
+    
+    try {
+      const videoId = getVideoId(youtubeUrl);
+      const analysis = await performRealAudioAnalysis(videoId, songTitle);
+      
+      setSongAnalysis(analysis);
+      setError(null);
+    } catch (err: any) {
+      setError(`Re-analysis failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   if (isAnalyzing) {
+    console.log('🔄 Rendering loading state - isAnalyzing:', isAnalyzing);
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007bff" />
-        <Text style={styles.loadingText}>Analyzing chord progression...</Text>
-        <Text style={styles.loadingSubtext}>This may take a few moments</Text>
+        <ActivityIndicator size="large" color="#4CAF50" />
+        <Text style={styles.loadingText}>Analyzing real-time chord progression...</Text>
+        <Text style={styles.loadingSubtext}>
+          🎵 {songTitle}
+        </Text>
+        <Text style={styles.loadingNote}>
+          Using audio analysis - this may take 30-60 seconds
+        </Text>
       </View>
     );
   }
 
-  if (error) {
+  if (error && !songAnalysis) {
+    console.log('❌ Rendering error state:', error);
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Analysis Error</Text>
+        <Text style={styles.errorText}>⚠️ Analysis Failed</Text>
         <Text style={styles.errorMessage}>{error}</Text>
-        <Text style={styles.errorSubtext}>Using fallback chord progression</Text>
+        <Text style={styles.debugInfo}>
+          Check browser console (F12) for detailed error information
+        </Text>
+        <TouchableOpacity style={styles.retryButton} onPress={handleReAnalyze}>
+          <Text style={styles.retryButtonText}>🔄 Retry Analysis</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.backButtonText}>← Back to Search</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
+  if (!songAnalysis) {
+    console.log('❌ No song analysis available');
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>No chord data available</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.backButtonText}>← Back to Search</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  console.log('✅ Rendering SimpleSynchronizedChordPlayer with analysis:', {
+    songTitle: songAnalysis.songTitle,
+    chordCount: songAnalysis.chordProgression.length,
+    analysisMethod: songAnalysis.analysisMethod,
+    confidence: songAnalysis.confidence
+  });
+
+  console.log('🎸 About to render SimpleSynchronizedChordPlayer component');
+  console.log('🎸 Props being passed:', {
+    videoId: songAnalysis.videoId,
+    songTitle: songAnalysis.songTitle,
+    chordProgressionLength: songAnalysis.chordProgression.length,
+    hasAnalysisInfo: !!songAnalysis.analysisMethod
+  });
+
   return (
-    <View style={styles.container}>
-      <SynchronizedChordPlayer
-        videoId={videoId}
-        songTitle={songTitle}
-        chordProgression={chordProgression}
-        onBack={() => navigation.goBack()}
-      />
-    </View>
+    <SimpleSynchronizedChordPlayer
+      videoId={songAnalysis.videoId}
+      songTitle={songAnalysis.songTitle}
+      chordProgression={songAnalysis.chordProgression}
+      onBack={() => navigation.goBack()}
+      onChordAdjust={handleChordAdjustment}
+      analysisInfo={{
+        method: songAnalysis.analysisMethod,
+        confidence: songAnalysis.confidence,
+        key: songAnalysis.key,
+        bpm: songAnalysis.bpm,
+        timeSignature: songAnalysis.timeSignature
+      }}
+    />
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -292,14 +300,19 @@ const styles = StyleSheet.create({
   loadingText: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: '600',
     marginTop: 20,
-    textAlign: 'center',
+    fontWeight: 'bold',
   },
   loadingSubtext: {
-    color: '#888',
+    color: '#aaa',
     fontSize: 14,
-    marginTop: 8,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  loadingNote: {
+    color: '#666',
+    fontSize: 12,
+    marginTop: 10,
     textAlign: 'center',
   },
   errorContainer: {
@@ -311,21 +324,42 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#ff6b6b',
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: 'bold',
     marginBottom: 10,
-    textAlign: 'center',
   },
   errorMessage: {
-    color: '#fff',
+    color: '#aaa',
     fontSize: 14,
-    marginBottom: 10,
     textAlign: 'center',
+    marginBottom: 20,
   },
-  errorSubtext: {
+  debugInfo: {
     color: '#888',
     fontSize: 12,
     textAlign: 'center',
+    marginBottom: 20,
+    fontStyle: 'italic',
+  },
+  retryButton: {
+    backgroundColor: '#4CAF50',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  backButton: {
+    backgroundColor: '#666',
+    padding: 12,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
   },
 });
 

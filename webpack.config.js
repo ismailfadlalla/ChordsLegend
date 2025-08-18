@@ -4,6 +4,9 @@ const path = require('path');
 module.exports = async function (env, argv) {
   const config = await createExpoWebpackConfigAsync(env, argv);
   
+  // Fix asset paths for web deployment
+  config.output.publicPath = '/';
+  
   // Ignore the problematic HTML file from react-native-web-webview
   config.plugins.push(
     new (require('webpack')).IgnorePlugin({

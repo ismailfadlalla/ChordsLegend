@@ -1,0 +1,9 @@
+@echo off
+echo Starting ChordsLegend Backend Server...
+cd /d "%~dp0server"
+echo Current directory: %CD%
+echo Installing dependencies...
+pip install -r requirements.txt
+echo Starting Flask server...
+python app.py
+pause

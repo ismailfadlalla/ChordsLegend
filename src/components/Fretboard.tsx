@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Dimensions, StyleSheet, Text, View } from 'react-native';
+import { ChordDefinition } from '../utils/chordLibrary';
 
 // Get screen dimensions for responsive sizing
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -14,8 +15,8 @@ export interface ChordFingering {
 }
 
 interface FretboardProps {
-  chord: string;
-  fingering: ChordFingering;
+  chord: ChordDefinition;
+  fingering?: ChordFingering;
   onFingeringChange?: (fingering: ChordFingering) => void;
   theme: any;
   size?: 'small' | 'medium' | 'large';
@@ -23,37 +24,37 @@ interface FretboardProps {
   animationDelay?: number;
 }
 
-// Enhanced sizing system for better mobile experience
+// Enhanced sizing system for better mobile experience with MUCH MORE COMPACT layout
 const getSizeDimensions = (size: 'small' | 'medium' | 'large') => {
   const baseWidth = Math.min(screenWidth * 0.85, 300); // Responsive to screen width
   
   switch (size) {
     case 'small':
       return {
-        width: baseWidth * 0.6,
-        height: (baseWidth * 0.6) * 1.2,
-        stringSpacing: (baseWidth * 0.6) / 6,
-        fretSpacing: ((baseWidth * 0.6) * 1.2) / 5,
-        dotSize: 12,
-        fontSize: 10
+        width: baseWidth * 0.5, // Even smaller
+        height: (baseWidth * 0.5) * 0.7, // Much more compact height ratio
+        stringSpacing: (baseWidth * 0.5) / 8, // Even tighter spacing
+        fretSpacing: ((baseWidth * 0.5) * 0.7) / 5,
+        dotSize: 10, // Smaller dots
+        fontSize: 9
       };
     case 'medium':
       return {
-        width: baseWidth * 0.75,
-        height: (baseWidth * 0.75) * 1.2,
-        stringSpacing: (baseWidth * 0.75) / 6,
-        fretSpacing: ((baseWidth * 0.75) * 1.2) / 5,
-        dotSize: 16,
-        fontSize: 12
+        width: baseWidth * 0.65, // Smaller than before
+        height: (baseWidth * 0.65) * 0.8, // Much more compact
+        stringSpacing: (baseWidth * 0.65) / 8,
+        fretSpacing: ((baseWidth * 0.65) * 0.8) / 5,
+        dotSize: 14,
+        fontSize: 11
       };
     case 'large':
       return {
-        width: baseWidth,
-        height: baseWidth * 1.2,
-        stringSpacing: baseWidth / 6,
-        fretSpacing: (baseWidth * 1.2) / 5,
-        dotSize: 20,
-        fontSize: 14
+        width: baseWidth * 0.8, // Reduced from full width
+        height: baseWidth * 0.85, // Much more compact from 1.2 to 0.85
+        stringSpacing: baseWidth / 8, // Much tighter string spacing
+        fretSpacing: (baseWidth * 0.85) / 5,
+        dotSize: 18, // Smaller dots
+        fontSize: 13
       };
   }
 };
@@ -69,7 +70,16 @@ export const Fretboard: React.FC<FretboardProps> = ({
 }) => {
   const strings = ['E', 'A', 'D', 'G', 'B', 'E']; // From 6th to 1st string
   const maxFrets = 4; // Standard chord diagrams show 4 frets
-  const baseFret = fingering.baseFret || 1;
+  
+  // Use passed fingering or default to first fingering from chord definition
+  const activeFingering = fingering || (chord.fingerings && chord.fingerings[0]) || {
+    name: 'Default',
+    frets: [0, 0, 0, 0, 0, 0],
+    fingers: [0, 0, 0, 0, 0, 0],
+    type: 'open' as const
+  };
+  
+  const baseFret = activeFingering.baseFret || 1;
   const dimensions = getSizeDimensions(size);
   
   // Animation for highlighting
@@ -119,7 +129,7 @@ export const Fretboard: React.FC<FretboardProps> = ({
           height: dimensions.height,
           backgroundColor: theme.surface + '20',
           borderRadius: 12,
-          padding: 12,
+          padding: 8, // Reduced from 12 to 8
           elevation: isHighlighted ? 4 : 2,
           shadowColor: theme.primary,
           shadowOffset: { width: 0, height: 2 },
@@ -144,17 +154,17 @@ export const Fretboard: React.FC<FretboardProps> = ({
         <View style={[
           styles.fretboardBackground,
           {
-            width: dimensions.width - 24,
-            height: dimensions.height - 24,
+            width: dimensions.width - 16, // Adjusted for reduced padding
+            height: dimensions.height - 16, // Adjusted for reduced padding
             backgroundColor: '#F5DEB3', // Light wood color
             borderRadius: 8,
             position: 'absolute',
-            top: 12,
-            left: 12,
+            top: 8, // Adjusted for reduced padding
+            left: 8, // Adjusted for reduced padding
           }
         ]} />
         
-        {/* Nut (thick line at the beginning for open chords) */}
+        {/* Nut (thick line at the beginning for open chords) - adjusted position */}
         <View
           style={[
             styles.nut,
@@ -163,34 +173,34 @@ export const Fretboard: React.FC<FretboardProps> = ({
               height: (strings.length - 1) * dimensions.stringSpacing + 10,
               width: baseFret === 1 ? 6 : 0,
               left: 20,
-              top: 40,
+              top: 30, // Moved up from 40 to 30
               borderRadius: 3,
             }
           ]}
         />
         
-        {/* Frets with improved styling */}
+        {/* Frets with MUCH REDUCED prominence - barely visible lines */}
         {Array.from({ length: maxFrets + 1 }, (_, fretIndex) => (
           <View
             key={`fret-${fretIndex}`}
             style={[
               styles.fretLine,
               {
-                height: (strings.length - 1) * dimensions.stringSpacing + 10,
-                width: fretIndex === 0 ? (baseFret === 1 ? 0 : 3) : 2,
+                height: (strings.length - 1) * dimensions.stringSpacing + 8, // Slightly shorter
+                width: fretIndex === 0 ? (baseFret === 1 ? 0 : 1) : 0.5, // Much thinner: 2->1 and 1->0.5
                 backgroundColor: fretIndex === 0 && baseFret > 1 
-                  ? theme.text 
-                  : '#C0C0C0', // Silver fret wire
+                  ? theme.text + '30' // Very transparent
+                  : '#C0C0C0' + '20', // Extremely transparent fret wire
                 left: 25 + (fretIndex * dimensions.fretSpacing),
-                top: 40,
-                borderRadius: 1,
-                elevation: 1,
+                top: 25, // Moved up more: from 30 to 25
+                borderRadius: 0.2, // Very thin rounded edges
+                opacity: 0.3, // Added opacity for extra subtlety
               }
             ]}
           />
         ))}
         
-        {/* Strings with realistic thickness variation */}
+        {/* Strings with realistic thickness variation - adjusted positioning */}
         {strings.map((stringName, stringIndex) => {
           const stringThickness = stringIndex < 2 ? 3 : stringIndex < 4 ? 2 : 1.5;
           return (
@@ -203,7 +213,7 @@ export const Fretboard: React.FC<FretboardProps> = ({
                   height: stringThickness,
                   backgroundColor: '#666',
                   left: 20,
-                  top: 40 + (stringIndex * dimensions.stringSpacing),
+                  top: 30 + (stringIndex * dimensions.stringSpacing), // Moved up from 40 to 30
                   borderRadius: stringThickness / 2,
                 }
               ]}
@@ -211,7 +221,7 @@ export const Fretboard: React.FC<FretboardProps> = ({
           );
         })}
         
-        {/* String labels with better positioning */}
+        {/* String labels with better positioning - moved up */}
         {strings.map((stringName, stringIndex) => (
           <Text
             key={`label-${stringIndex}`}
@@ -222,7 +232,7 @@ export const Fretboard: React.FC<FretboardProps> = ({
                 fontSize: dimensions.fontSize,
                 fontWeight: 'bold',
                 left: 4,
-                top: 35 + (stringIndex * dimensions.stringSpacing),
+                top: 25 + (stringIndex * dimensions.stringSpacing), // Moved up from 35 to 25
                 textAlign: 'center',
               }
             ]}
@@ -231,7 +241,7 @@ export const Fretboard: React.FC<FretboardProps> = ({
           </Text>
         ))}
         
-        {/* Fret numbers (only show if not starting from 1st fret) */}
+        {/* Fret numbers (only show if not starting from 1st fret) - moved up */}
         {baseFret > 1 && (
           <Text
             style={[
@@ -241,7 +251,7 @@ export const Fretboard: React.FC<FretboardProps> = ({
                 fontSize: dimensions.fontSize + 2,
                 fontWeight: 'bold',
                 left: 30 + (dimensions.fretSpacing / 2),
-                top: 15,
+                top: 8, // Moved up from 15 to 8
                 textAlign: 'center',
               }
             ]}
@@ -250,9 +260,11 @@ export const Fretboard: React.FC<FretboardProps> = ({
           </Text>
         )}
         
-        {/* Open string indicators */}
-        {fingering.frets.map((fret, stringIndex) => {
-          if (fret !== 0) return null; // Only show for open strings
+        {/* Open string indicators - adjusted position */}
+        {activeFingering.frets.map((fret, stringIndex) => {
+          if (fret !== 0) {
+            return null; // Only show for open strings
+          }
           
           return (
             <View
@@ -267,16 +279,18 @@ export const Fretboard: React.FC<FretboardProps> = ({
                   borderColor: theme.primary || '#007AFF',
                   backgroundColor: 'transparent',
                   left: 25 - (dimensions.dotSize * 0.4),
-                  top: 40 + (stringIndex * dimensions.stringSpacing) - (dimensions.dotSize * 0.4),
+                  top: 30 + (stringIndex * dimensions.stringSpacing) - (dimensions.dotSize * 0.4), // Moved up from 40 to 30
                 }
               ]}
             />
           );
         })}
         
-        {/* Muted string indicators */}
-        {fingering.frets.map((fret, stringIndex) => {
-          if (fret !== -1) return null; // Only show for muted strings
+        {/* Muted string indicators - adjusted position */}
+        {activeFingering.frets.map((fret, stringIndex) => {
+          if (fret !== -1) {
+            return null; // Only show for muted strings
+          }
           
           return (
             <Text
@@ -288,7 +302,7 @@ export const Fretboard: React.FC<FretboardProps> = ({
                   color: theme.error || '#FF3B30',
                   fontWeight: 'bold',
                   left: 25 - (dimensions.fontSize / 2),
-                  top: 32 + (stringIndex * dimensions.stringSpacing),
+                  top: 22 + (stringIndex * dimensions.stringSpacing), // Moved up from 32 to 22
                   textAlign: 'center',
                 }
               ]}
@@ -299,15 +313,19 @@ export const Fretboard: React.FC<FretboardProps> = ({
         })}
         
         {/* Enhanced finger positions with shadows and better styling */}
-        {fingering.frets.map((fret, stringIndex) => {
-          if (fret <= 0) return null; // Skip open or muted strings
+        {activeFingering.frets.map((fret, stringIndex) => {
+          if (fret <= 0) {
+            return null; // Skip open or muted strings
+          }
           
           const fretPosition = fret - baseFret + 1;
-          if (fretPosition < 1 || fretPosition > maxFrets) return null;
+          if (fretPosition < 1 || fretPosition > maxFrets) {
+            return null;
+          }
           
           const x = 25 + (fretPosition * dimensions.fretSpacing) - (dimensions.fretSpacing / 2);
-          const y = 40 + (stringIndex * dimensions.stringSpacing) - (dimensions.dotSize / 2);
-          const fingerNumber = fingering.fingers?.[stringIndex] || '';
+          const y = 30 + (stringIndex * dimensions.stringSpacing) - (dimensions.dotSize / 2); // Moved up from 40 to 30
+          const fingerNumber = activeFingering.fingers?.[stringIndex] || '';
           
           return (
             <Animated.View
@@ -352,14 +370,16 @@ export const Fretboard: React.FC<FretboardProps> = ({
         })}
         
         {/* Barre chords with enhanced visual */}
-        {fingering.barres?.map((barre, index) => {
+        {activeFingering.barres?.map((barre, index) => {
           const fretPosition = barre.fret - baseFret + 1;
-          if (fretPosition < 1 || fretPosition > maxFrets) return null;
+          if (fretPosition < 1 || fretPosition > maxFrets) {
+            return null;
+          }
           
           const startString = barre.startString || 0;
           const endString = barre.endString || 5;
           const x = 25 + (fretPosition * dimensions.fretSpacing) - (dimensions.fretSpacing / 2);
-          const startY = 40 + (startString * dimensions.stringSpacing) - (dimensions.dotSize / 2);
+          const startY = 30 + (startString * dimensions.stringSpacing) - (dimensions.dotSize / 2); // Moved up from 40 to 30
           const height = (endString - startString) * dimensions.stringSpacing;
           
           return (
@@ -387,7 +407,7 @@ export const Fretboard: React.FC<FretboardProps> = ({
           );
         })}
         
-        {/* Chord name with improved styling */}
+        {/* Chord name with improved styling - moved up */}
         <Text
           style={[
             styles.chordName,
@@ -397,7 +417,7 @@ export const Fretboard: React.FC<FretboardProps> = ({
               fontWeight: 'bold',
               textAlign: 'center',
               position: 'absolute',
-              bottom: 10,
+              bottom: 5, // Moved up from 10 to 5
               width: '100%',
               textShadowColor: 'rgba(0,0,0,0.2)',
               textShadowOffset: { width: 0, height: 1 },

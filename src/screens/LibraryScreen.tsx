@@ -68,12 +68,13 @@ export default function LibraryScreen() {
   };
 
   const handleSelectSong = (song: FavoriteSong) => {
+    console.log('📚 LibraryScreen: Selecting song for analysis:', song.title);
     navigation.navigate('ChordPlayer', {
       youtubeUrl: `https://www.youtube.com/watch?v=${song.id}`,
       songTitle: song.title,
       thumbnail: song.thumbnail,
       channel: song.channelTitle,
-      chords: [],
+      chords: [], // Empty chords will trigger analysis in ChordPlayer
     });
   };
 
@@ -114,9 +115,9 @@ export default function LibraryScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Favorites</Text>
+        <Text style={styles.headerTitle}>My Library</Text>
         <Text style={styles.headerSubtitle}>
-          {favorites.length} song{favorites.length !== 1 ? 's' : ''}
+          {favorites.length} saved song{favorites.length !== 1 ? 's' : ''}
         </Text>
       </View>
 

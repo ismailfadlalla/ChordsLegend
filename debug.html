@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChordsLegend Debug</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        #root {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #d32f2f;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div class="loading">
+            <h2>🎵 ChordsLegend</h2>
+            <p>Loading React Native Web...</p>
+            <p>If you see this message for more than 5 seconds, there may be a JavaScript error.</p>
+        </div>
+    </div>
+    
+    <script>
+        // Log everything to help debug
+        console.log('🔍 HTML page loaded');
+        console.log('🔍 Root element:', document.getElementById('root'));
+        
+        // Catch all errors
+        window.addEventListener('error', function(event) {
+            console.error('🚨 Global error:', event.error);
+            document.getElementById('root').innerHTML = `
+                <div class="error">
+                    <h2>🚨 JavaScript Error</h2>
+                    <p><strong>Message:</strong> ${event.error?.message || 'Unknown error'}</p>
+                    <p><strong>File:</strong> ${event.filename || 'Unknown file'}</p>
+                    <p><strong>Line:</strong> ${event.lineno || 'Unknown line'}</p>
+                    <p>Check the browser console for more details.</p>
+                </div>
+            `;
+        });
+        
+        // Catch unhandled promise rejections
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('🚨 Unhandled promise rejection:', event.reason);
+            document.getElementById('root').innerHTML = `
+                <div class="error">
+                    <h2>🚨 Promise Rejection</h2>
+                    <p><strong>Reason:</strong> ${event.reason}</p>
+                    <p>Check the browser console for more details.</p>
+                </div>
+            `;
+        });
+        
+        // Timeout check
+        setTimeout(() => {
+            const root = document.getElementById('root');
+            if (root && root.innerHTML.includes('Loading React Native Web')) {
+                console.error('🚨 React Native Web failed to load after 10 seconds');
+                root.innerHTML = `
+                    <div class="error">
+                        <h2>🚨 Loading Timeout</h2>
+                        <p>React Native Web failed to load after 10 seconds.</p>
+                        <p>This might indicate a bundle loading issue or JavaScript error.</p>
+                        <p>Check the browser console and Network tab for more details.</p>
+                    </div>
+                `;
+            }
+        }, 10000);
+    </script>
+</body>
+</html>

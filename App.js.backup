@@ -1,0 +1,840 @@
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import Constants from 'expo-constants';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+// Firebase imports
+import { getApps, initializeApp } from 'firebase/app';
+import { createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+
+import { useYouTubeSearch } from './src/hooks/useYouTubeSearch';
+import ChordPlayerScreen from './src/screens/ChordPlayerScreen';
+import LibraryScreen from './src/screens/LibraryScreen';
+import SearchScreen from './src/screens/SearchScreen';
+import AuthScreen from './src/screens/AuthScreen';
+
+console.log('🎵 Simple Navigation with Home Layout Loading...');
+console.log('🌍 ENV TEST:', process.env.EXPO_PUBLIC_YOUTUBE_API_KEY);
+
+const Stack = createNativeStackNavigator();
+
+// Firebase configuration
+const getFirebaseConfig = () => {
+  const fromConstants = Constants.expoConfig?.extra;
+  
+  return {
+    apiKey: fromConstants?.FIREBASE_API_KEY || process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+    authDomain: fromConstants?.FIREBASE_AUTH_DOMAIN || process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: fromConstants?.FIREBASE_PROJECT_ID || process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: fromConstants?.FIREBASE_STORAGE_BUCKET || process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: fromConstants?.FIREBASE_MESSAGING_SENDER_ID || process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: fromConstants?.FIREBASE_APP_ID || process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+    measurementId: fromConstants?.FIREBASE_MEASUREMENT_ID || process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID
+  };
+};
+
+// Initialize Firebase
+let firebaseApp;
+if (getApps().length === 0) {
+  firebaseApp = initializeApp(getFirebaseConfig());
+} else {
+  firebaseApp = getApps()[0];
+}
+
+const auth = getAuth(firebaseApp);
+
+// Real YouTube API integration
+const searchYouTube = async (query) => {
+  try {
+    // Use Expo public env variable for web builds, fallback to Constants for web
+    const API_KEY = (Constants.expoConfig?.extra?.EXPO_PUBLIC_YOUTUBE_API_KEY) || process.env.EXPO_PUBLIC_YOUTUBE_API_KEY;
+    console.log('🔑 YOUTUBE_API_KEY (env/extra):', API_KEY);
+    if (!API_KEY) {
+      throw new Error('YouTube API key not configured');
+    }
+    console.log('🔍 Searching YouTube for:', query);
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=10&q=${encodeURIComponent(query)}&type=video&key=${API_KEY}`;
+    console.log('🌐 YouTube API URL:', url);
+    const response = await fetch(url);
+    const data = await response.json();
+    console.log('📦 YouTube API response:', response.data);
+    if (!response.data.items || response.data.items.length === 0) {
+      throw new Error('No results returned from YouTube API.');
+    }
+    return response.data.items.map((item) => ({
+      id: { videoId: item.id.videoId },
+      snippet: {
+        title: item.snippet.title,
+        channelTitle: item.snippet.channelTitle,
+        thumbnails: {
+          default: { url: item.snippet.thumbnails.default.url },
+          medium: { url: item.snippet.thumbnails.medium?.url },
+          high: { url: item.snippet.thumbnails.high?.url }
+        },
+        // Add more fields for debugging
+        description: item.snippet.description,
+        publishedAt: item.snippet.publishedAt
+      }
+    }));
+  } catch (error) {
+    console.error('YouTube search error:', error, error?.response?.data);
+    throw new Error('Failed to search YouTube: ' + (error.message || 'Unknown error') + (error?.response?.data ? ' | ' + JSON.stringify(error.response.data) : ''));
+  }
+};
+
+// Backend API URL configuration
+const API_URL = `${Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL}/api/analyze-song`;
+
+// Real Chord Analysis API integration
+const analyzeChords = async (videoId) => {
+  try {
+    console.log('🎵 Analyzing chords for video:', videoId);
+    console.log('API_URL:', API_URL);
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ url: videoId })
+    });
+    if (!response.ok) {
+      throw new Error('Chord analysis failed: ' + response.status);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Chord analysis error:', error);
+    throw new Error('Failed to analyze chords: ' + (error.message || 'Unknown error'));
+  }
+};
+
+function HomeScreen({ navigation }) {
+  console.log('🎵 HomeScreen Rendering...');
+  
+  const handleButtonPress = (action) => {
+    console.log(`🎵 Button pressed: ${action}`);
+    
+    // Navigate to different screens
+    if (action === 'Search') {
+      navigation.navigate('Search');
+    } else if (action === 'Library') {
+      navigation.navigate('Library');
+    } else if (action === 'Auth') {
+      navigation.navigate('Auth');
+    }
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
+      {/* Welcome Header */}
+      <View style={styles.header}>
+        <Text style={styles.welcomeText}>
+          Welcome to ChordsLegend!
+        </Text>
+        <Text style={styles.subtitle}>
+          Discover chords for your favorite songs
+        </Text>
+      </View>
+
+      {/* Quick Actions */}
+      <View style={styles.quickActions}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => handleButtonPress('Search')}
+        >
+          <Text style={styles.actionIcon}>🔍</Text>
+          <Text style={styles.actionText}>Search</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => handleButtonPress('Library')}
+        >
+          <Text style={styles.actionIcon}>📚</Text>
+          <Text style={styles.actionText}>Library</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => handleButtonPress('Auth')}
+        >
+          <Text style={styles.actionIcon}>🔐</Text>
+          <Text style={styles.actionText}>Login</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Status */}
+      <View style={styles.status}>
+        <Text style={styles.statusText}>
+          ✅ Navigation + Layout Working!
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// Auth Screen with Login/Signup
+function AuthScreen({ navigation }) {
+  // Professional SearchScreen implementation
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedVideoKey, setSelectedVideoKey] = useState(null);
+  const [favorites, setFavorites] = useState([]);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const { videos, loading, error, search, nextPageToken } = useYouTubeSearch();
+
+  const handleSearch = () => {
+    if (!searchQuery.trim()) {
+      Alert.alert('Error', 'Please enter a search term');
+      return;
+    }
+    search(searchQuery, true);
+  };
+
+  const handleLoadMore = async () => {
+    if (loading || isFetchingMore || !nextPageToken) return;
+    setIsFetchingMore(true);
+    await search(searchQuery, false, nextPageToken);
+    setIsFetchingMore(false);
+  };
+
+  const handleVideoSelect = (video) => {
+    console.log('🎵 Analyzing chords for video:', video.id.videoId);
+    
+    // Navigate directly to ChordPlayer for analysis
+    navigation.navigate('ChordPlayer', {
+      youtubeUrl: `https://www.youtube.com/watch?v=${video.id.videoId}`,
+      songTitle: video.snippet.title,
+      thumbnail: video.snippet.thumbnails?.high?.url || video.snippet.thumbnails?.medium?.url || video.snippet.thumbnails?.default?.url,
+      channel: video.snippet.channelTitle,
+      chords: [], // Empty chords will trigger analysis in ChordPlayer
+    });
+  };
+
+  const handleToggleFavorite = (videoId) => {
+    setFavorites(prev => prev.includes(videoId)
+      ? prev.filter(id => id !== videoId)
+      : [...prev, videoId]);
+  };
+
+  const renderVideoItem = ({ item, index }) => {
+    const key = item.id?.videoId || String(index);
+    const isSelected = selectedVideoKey === key;
+    const isFavorite = favorites.includes(key);
+    const title = item?.snippet?.title || 'No Title';
+    let thumbnailUrl = item?.snippet?.thumbnails?.high?.url || item?.snippet?.thumbnails?.medium?.url || item?.snippet?.thumbnails?.default?.url || 'https://cdn-icons-png.flaticon.com/512/727/727245.png';
+    if (!item || !item.snippet) return null;
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14, borderWidth: 1, borderColor: isSelected ? '#007AFF' : '#222', backgroundColor: isSelected ? '#222' : '#181818', borderRadius: 12, padding: 8, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4 }}>
+        <TouchableOpacity onPress={() => handleVideoSelect(item)} style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }} activeOpacity={0.8}>
+          <Image
+            source={{ uri: thumbnailUrl.replace('http://', 'https://') }}
+            style={{ width: 64, height: 64, borderRadius: 10, backgroundColor: '#444', marginRight: 12 }}
+            resizeMode="cover"
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#fff', fontSize: 17, fontWeight: 'bold', marginBottom: 2 }}>{title}</Text>
+            <Text style={{ color: '#aaa', fontSize: 13 }}>{item.snippet.channelTitle}</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleToggleFavorite(key)} style={{ marginLeft: 10 }}>
+          <Text style={{ fontSize: 26, color: isFavorite ? '#FFD700' : '#888' }}>{isFavorite ? '★' : '☆'}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: '#181818' }}>
+      <View style={styles.searchHeader}>
+        <View style={styles.searchInputContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for YouTube videos..."
+            placeholderTextColor="#888"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+            onSubmitEditing={handleSearch}
+          />
+          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+            <Text style={styles.searchButtonText}>Search</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {error && (
+        <View style={{ padding: 10 }}>
+          <Text style={{ color: '#ff4444', textAlign: 'center', fontSize: 15 }}>{error}</Text>
+        </View>
+      )}
+      {loading && (
+        <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 20 }} />
+      )}
+
+      <FlatList
+        data={Array.isArray(videos) ? videos : []}
+        renderItem={renderVideoItem}
+        keyExtractor={item => item.id?.videoId || item.id}
+        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+        ListEmptyComponent={<Text style={{ color: 'gray', textAlign: 'center', marginTop: 30, fontSize: 16 }}>No results found.</Text>}
+        showsVerticalScrollIndicator={false}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={isFetchingMore ? <ActivityIndicator size="small" color="#fff" style={{ margin: 10 }} /> : null}
+      />
+    </View>
+  );
+}
+
+// Auth Screen with Login/Signup
+function AuthScreen({ navigation }) {
+  console.log('🔐 AuthScreen ENTRY');
+  const authBanner = (
+    <View style={{ backgroundColor: '#0ff', padding: 10, marginBottom: 10 }}>
+      <Text style={{ color: '#000', fontWeight: 'bold', fontSize: 22 }}>
+        AuthScreen Banner (should always show)
+      </Text>
+    </View>
+  );
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleAuth = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      console.log('🔐 Authenticating:', { email, isLogin });
+      
+      let userCredential;
+      if (isLogin) {
+        // Sign in existing user
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        // Create new user
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      }
+      const { user } = userCredential;
+      console.log('🎉 Auth successful:', user.uid);
+      
+      Alert.alert(
+        'Success!',
+        isLogin ? 'Logged in successfully!' : 'Account created successfully!',
+        [
+          { 
+            text: 'OK', 
+            onPress: () => {
+              // Clear form
+              setEmail('');
+              setPassword('');
+              navigation.goBack();
+            }
+          }
+        ]
+      );
+      
+    } catch (error) {
+      console.error('Auth error:', error);
+      
+      let errorMessage = 'Authentication failed. Please try again.';
+      
+      // Handle specific Firebase auth errors
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email. Please sign up first.';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password. Please try again.';
+      } else if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'An account with this email already exists. Please sign in instead.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak. Please use at least 6 characters.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Please enter a valid email address.';
+      }
+      
+      Alert.alert('Authentication Error', errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: '#1a1a1a', padding: 20 }}>
+      {authBanner}
+      <View style={styles.authHeader}>
+        <Text style={styles.authTitle}>
+          {isLogin ? '🔐 Login' : '👤 Sign Up'}
+        </Text>
+        <Text style={styles.authSubtitle}>
+          {isLogin ? 'Welcome back!' : 'Create your account'}
+        </Text>
+      </View>
+
+      <View style={styles.authForm}>
+        <TextInput
+          style={styles.authInput}
+          placeholder="Email"
+          placeholderTextColor="#666"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+        
+        <TextInput
+          style={styles.authInput}
+          placeholder="Password"
+          placeholderTextColor="#666"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+
+        <TouchableOpacity 
+          style={styles.authButton}
+          onPress={handleAuth}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.authButtonText}>
+              {isLogin ? 'Login' : 'Sign Up'}
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.switchButton}
+          onPress={() => setIsLogin(!isLogin)}
+        >
+          <Text style={styles.switchButtonText}>
+            {isLogin 
+              ? "Don't have an account? Sign Up" 
+              : "Already have an account? Login"
+            }
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity 
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
+      >
+        <Text style={styles.backButtonText}>← Back to Home</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+export default function App() {
+  console.log('🎵 Full Navigation App Rendering...');
+  // Top-level diagnostic
+  return (
+    <>
+      <NavigationContainer>
+        <Stack.Navigator
+          initialRouteName="Home"
+          screenOptions={{
+            headerStyle: { backgroundColor: '#1a1a1a' },
+            headerTintColor: '#fff',
+            headerTitleStyle: { fontWeight: 'bold' }
+          }}
+        >
+          <Stack.Screen 
+            name="Home" 
+            component={HomeScreen}
+            options={{ title: '🎵 ChordsLegend' }}
+          />
+          <Stack.Screen 
+            name="Search" 
+            component={SearchScreen}
+            options={{ title: '🔍 Search Songs' }}
+          />
+          <Stack.Screen 
+            name="Library" 
+            component={LibraryScreen}
+            options={{ title: '📚 My Library' }}
+          />
+          <Stack.Screen 
+            name="ChordPlayer" 
+            component={ChordPlayerScreen}
+            options={{ title: '🎼 Chord Analysis' }}
+          />
+          <Stack.Screen 
+            name="Auth" 
+            component={AuthScreen}
+            options={{ title: '🔐 Authentication' }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#1a1a1a',
+  },
+  header: {
+    padding: 20,
+    paddingTop: 40,
+    alignItems: 'center',
+  },
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+  },
+  quickActions: {
+    flexDirection: 'row',
+    padding: 20,
+    gap: 15,
+  },
+  actionButton: {
+    flex: 1,
+    backgroundColor: '#333',
+    padding: 20,
+    borderRadius: 15,
+    alignItems: 'center',
+  },
+  actionIcon: {
+    fontSize: 30,
+    marginBottom: 10,
+  },
+  actionText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  status: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  statusText: {
+    fontSize: 18,
+    color: '#4caf50',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  screenContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    padding: 20,
+  },
+  screenTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  screenText: {
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  backButton: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 10,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  // Search Screen Styles
+  searchContainer: {
+    flex: 1,
+    backgroundColor: '#1a1a1a',
+  },
+  searchHeader: {
+    padding: 20,
+    paddingTop: 10,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#333',
+    borderRadius: 10,
+    padding: 5,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 16,
+    padding: 15,
+  },
+  searchButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderRadius: 8,
+    marginLeft: 5,
+  },
+  searchButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  searchResults: {
+    flex: 1,
+    padding: 20,
+  },
+  resultsList: {
+    paddingBottom: 20,
+  },
+  videoItem: {
+    flexDirection: 'row',
+    backgroundColor: '#333',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  videoThumbnail: {
+    width: 60,
+    height: 60,
+    backgroundColor: '#555',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  videoIcon: {
+    fontSize: 20,
+  },
+  thumbnailImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+  },
+  videoInfo: {
+    flex: 1,
+  },
+  videoTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  videoChannel: {
+    color: '#888',
+    fontSize: 14,
+    marginBottom: 3,
+  },
+  videoDescription: {
+    color: '#ccc',
+    fontSize: 14,
+    marginBottom: 3,
+  },
+  videoPublishedAt: {
+    color: '#bbb',
+    fontSize: 12,
+    marginBottom: 3,
+  },
+  videoDuration: {
+    color: '#4caf50',
+    fontSize: 12,
+  },
+  analyzeIcon: {
+    fontSize: 20,
+    color: '#007AFF',
+    marginLeft: 10,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#888',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  // Library Screen Styles
+  libraryContainer: {
+    flex: 1,
+    backgroundColor: '#1a1a1a',
+  },
+  libraryHeader: {
+    padding: 20,
+    paddingTop: 10,
+  },
+  libraryTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 5,
+  },
+  librarySubtitle: {
+    fontSize: 16,
+    color: '#888',
+  },
+  libraryList: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  songItem: {
+    flexDirection: 'row',
+    backgroundColor: '#333',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  songIcon: {
+    width: 50,
+    height: 50,
+    backgroundColor: '#555',
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  songIconText: {
+    fontSize: 20,
+  },
+  songInfo: {
+    flex: 1,
+  },
+  songTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  songArtist: {
+    color: '#888',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  songMeta: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  songDifficulty: {
+    color: '#4caf50',
+    fontSize: 12,
+    marginRight: 15,
+  },
+  songLastPlayed: {
+    color: '#666',
+    fontSize: 12,
+  },
+  chordsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  chordTag: {
+    backgroundColor: '#555',
+    color: '#fff',
+    fontSize: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
+    marginRight: 5,
+    marginBottom: 3,
+  },
+  playIcon: {
+    fontSize: 20,
+    color: '#007AFF',
+    marginLeft: 10,
+  },
+  // Auth Screen Styles
+  authContainer: {
+    flex: 1,
+    backgroundColor: '#1a1a1a',
+    padding: 20,
+  },
+  authHeader: {
+    alignItems: 'center',
+    marginTop: 40,
+    marginBottom: 40,
+  },
+  authTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 10,
+  },
+  authSubtitle: {
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+  },
+  authForm: {
+    flex: 1,
+  },
+  authInput: {
+    backgroundColor: '#333',
+    color: '#fff',
+    fontSize: 16,
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+  },
+  authButton: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  authButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  switchButton: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  switchButtonText: {
+    color: '#007AFF',
+    fontSize: 14,
+  },
+});
+
+console.log('🎵 Simple Navigation Module Loaded');

@@ -283,7 +283,7 @@ export const Fretboard: React.FC<FretboardProps> = ({
         
         {/* Open string indicators */}
         {fingering.frets.map((fret, stringIndex) => {
-          if (fret !== 0) return null;
+          if (fret !== 0) { return null; }
           
           return (
             <View
@@ -307,7 +307,7 @@ export const Fretboard: React.FC<FretboardProps> = ({
         
         {/* Muted string indicators */}
         {fingering.frets.map((fret, stringIndex) => {
-          if (fret !== -1) return null;
+          if (fret !== -1) { return null; }
           
           return (
             <Text
@@ -332,10 +332,10 @@ export const Fretboard: React.FC<FretboardProps> = ({
         
         {/* Finger positions */}
         {fingering.frets.map((fret, stringIndex) => {
-          if (fret <= 0) return null;
+          if (fret <= 0) { return null; }
           
           const fretPosition = fret - baseFret + 1;
-          if (fretPosition < 1 || fretPosition > maxFrets) return null;
+          if (fretPosition < 1 || fretPosition > maxFrets) { return null; }
           
           const x = 30 + (fretPosition * dimensions.fretSpacing) - (dimensions.fretSpacing / 2);
           const y = 35 + (stringIndex * dimensions.stringSpacing) - (dimensions.dotSize / 2);
@@ -387,7 +387,7 @@ export const Fretboard: React.FC<FretboardProps> = ({
         {/* Barre indicators */}
         {fingering.barres?.map((barre, index) => {
           const fretPosition = barre.fret - baseFret + 1;
-          if (fretPosition < 1 || fretPosition > maxFrets) return null;
+          if (fretPosition < 1 || fretPosition > maxFrets) { return null; }
           
           const startY = 35 + (barre.startString * dimensions.stringSpacing);
           const endY = 35 + (barre.endString * dimensions.stringSpacing);

@@ -9,6 +9,7 @@ export function navigate<RouteName extends keyof RootStackParamList>(
   params?: RootStackParamList[RouteName]
 ) {
   if (navigationRef.isReady()) {
+    // @ts-ignore - Navigation type issue
     navigationRef.navigate(name, params);
   }
 }

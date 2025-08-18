@@ -72,7 +72,9 @@ async function runTests() {
   
   for (const url of testUrls) {
     const result = await testUrl(url);
-    if (!result) allPassed = false;
+    if (!result) {
+      allPassed = false;
+    }
   }
 
   console.log('\n' + '='.repeat(60));
