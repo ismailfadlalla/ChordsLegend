@@ -15,7 +15,11 @@ from flask_cors import CORS, cross_origin
 app = Flask(__name__, static_folder=None)
 
 # Enable CORS for all routes
-CORS(app, origins=['*'])
+CORS(app,
+     origins=['*'],
+     allow_headers=['content-type', 'cross-origin', 'authorization'],
+     methods=['GET', 'POST', 'OPTIONS']
+     )
 
 # Path to the web-build directory
 WEB_BUILD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'web-build')
