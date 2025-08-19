@@ -129,6 +129,7 @@
     "Proguard",
     "Psols",
     "pycache",
+    "pydub",
     "Pylance",
     "pytest",
     "Qollf",

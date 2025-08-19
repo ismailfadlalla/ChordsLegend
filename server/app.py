@@ -10,31 +10,15 @@ import random
 import time
 import socket
 from flask import Flask, jsonify, request, send_from_directory
-from flask_cors import CORS, cross_origin
+from flask_cors import CORS
 
 app = Flask(__name__, static_folder=None)
 
-# Enable CORS for all routes
-CORS(app,
-     origins=['*'],
-     allow_headers=['content-type', 'cross-origin', 'authorization'],
-     methods=['GET', 'POST', 'OPTIONS']
-     )
+# Clean CORS setup - no duplicates
+CORS(app)
 
 # Path to the web-build directory
 WEB_BUILD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'web-build')
-
-# Simple CORS handling
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    return response
-
-@app.route('/options', methods=['OPTIONS'])
-def handle_options():
-    return '', 204
 
 def check_ffmpeg():
     """Check if FFmpeg is available"""
@@ -334,8 +318,8 @@ def test_chords():
 
 # MAIN REAL CHORD ANALYSIS ENDPOINT
 @app.route('/api/analyze-song', methods=['POST', 'OPTIONS'])
-@cross_origin()
 def analyze_song():
+    # Handle OPTIONS for CORS
     if request.method == 'OPTIONS':
         return '', 200
     
@@ -436,8 +420,6 @@ def analyze_song():
             "status": "error",
             "error": f"Analysis request failed: {str(e)}"
         }), 500
-
-# ...rest of your routes remain the same...
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

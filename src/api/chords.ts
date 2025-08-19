@@ -13,9 +13,12 @@ export const analyzeChords = async (youtubeUrl: string): Promise<ChordData[]> =>
   
   try {
     // Use the properly configured apiCall function from client.ts
-    // This will automatically use Railway URL: https://chordslegend-production.up.railway.app
-    const data = await apiCall('/api/analyze-song', 'POST', {
-      youtube_url: youtubeUrl,
+    // This will automatically use Railway URL: https://chordslegend.up.railway.app
+    const data = await apiCall('/api/analyze-song', {
+      method: 'POST',
+      body: JSON.stringify({
+        youtube_url: youtubeUrl,
+      })
     });
 
     console.log('✅ Chord analysis response:', data);
@@ -46,8 +49,11 @@ export const analyzeChords = async (youtubeUrl: string): Promise<ChordData[]> =>
 // Keep existing search functionality if needed
 export const searchSongs = async (query: string) => {
   try {
-    const data = await apiCall('/api/search', 'POST', {
-      query: query,
+    const data = await apiCall('/api/search', {
+      method: 'POST',
+      body: JSON.stringify({
+        query: query,
+      })
     });
 
     return data.results || [];

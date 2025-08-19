@@ -1,34 +1,32 @@
-// Use local backend for testing since your Flask server is running on port 5000
+// Use Railway URL directly to avoid proxy issues
 const API_BASE = 'https://chordslegend.up.railway.app';
 
-export const apiCall = async (endpoint: string, method: string = 'GET', data?: any) => {
+export const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const url = `${API_BASE}${endpoint}`;
   
-  console.log(`🌐 Local API Call: ${method} ${url}`);
-  console.log('📦 Request data:', data);
-  
+  console.log('🌐 API Call:', options.method || 'GET', url);
+  console.log('📦 Request data:', options.body ? JSON.parse(options.body as string) : 'none');
+
   try {
     const response = await fetch(url, {
-      method,
       headers: {
         'Content-Type': 'application/json',
+        ...options.headers,
       },
-      body: data ? JSON.stringify(data) : undefined,
+      ...options,
     });
 
-    console.log('📡 Response status:', response.status);
-
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Response error:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const result = await response.json();
-    console.log('✅ Local API Response:', result);
-    return result;
+    const data = await response.json();
+    console.log('📡 Response status:', response.status);
+    console.log('✅ API Response:', data);
+    
+    return data;
   } catch (error) {
-    console.error('❌ Local API Error:', error);
+    console.error('❌ API Error:', error);
     throw error;
   }
 };
