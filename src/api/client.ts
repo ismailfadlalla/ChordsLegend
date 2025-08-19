@@ -1,10 +1,10 @@
-// Test with local API while Railway redeploys
-const API_BASE = 'http://localhost:5000';
+// Use Railway URL - HTTPS works with CSP
+const API_BASE = 'https://chordslegend.up.railway.app';
 
 export const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const url = `${API_BASE}${endpoint}`;
   
-  console.log('🌐 API Call:', options.method || 'GET', url);
+  console.log('🌐 Railway API Call:', options.method || 'GET', url);
   console.log('📦 Request data:', options.body ? JSON.parse(options.body as string) : 'none');
 
   try {
@@ -22,11 +22,11 @@ export const apiCall = async (endpoint: string, options: RequestInit = {}) => {
 
     const data = await response.json();
     console.log('📡 Response status:', response.status);
-    console.log('✅ API Response:', data);
+    console.log('✅ Railway API Response:', data);
     
     return data;
   } catch (error) {
-    console.error('❌ API Error:', error);
+    console.error('❌ Railway API Error:', error);
     throw error;
   }
 };
