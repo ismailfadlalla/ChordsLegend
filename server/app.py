@@ -9,13 +9,13 @@ import requests
 import random
 import time
 import socket
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-app = Flask(__name__, static_folder=None)
+app = Flask(__name__)
 
 # Clean CORS setup - no duplicates
-CORS(app)
+CORS(app, origins="*")
 
 # Path to the web-build directory
 WEB_BUILD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'web-build')

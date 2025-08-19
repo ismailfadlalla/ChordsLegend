@@ -1,5 +1,5 @@
-// Use Railway URL directly to avoid proxy issues
-const API_BASE = 'https://chordslegend.up.railway.app';
+// Test with local API while Railway redeploys
+const API_BASE = 'http://localhost:5000';
 
 export const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const url = `${API_BASE}${endpoint}`;
